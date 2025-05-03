@@ -1,0 +1,53 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:*"
+            ],
+            "Resource": [
+                "arn:aws:s3:::spokhand-data",
+                "arn:aws:s3:::spokhand-data/*"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "lambda:*"
+            ],
+            "Resource": [
+                "arn:aws:lambda:*:*:function:spokhand-processor"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "cloudformation:*"
+            ],
+            "Resource": [
+                "arn:aws:cloudformation:*:*:stack/spokhand-stack/*"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "iam:PassRole"
+            ],
+            "Resource": [
+                "arn:aws:iam::*:role/spokhand-lambda-role"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": [
+                "arn:aws:logs:*:*:log-group:/aws/lambda/spokhand-processor:*"
+            ]
+        }
+    ]
+} 
