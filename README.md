@@ -9,6 +9,7 @@ Spokhand is a real-time sign language recognition system that uses computer visi
 - Data collection and preprocessing utilities
 - Model training pipeline
 - User-friendly interface
+- AWS integration for data storage and processing
 
 ## Project Structure
 ```
@@ -17,6 +18,7 @@ spokhandSLR/
 │   ├── models/         # Machine learning models
 │   ├── utils/          # Utility functions
 │   ├── data/           # Data collection and processing
+│   ├── aws/            # AWS integration
 │   └── tests/          # Test files
 ├── requirements.txt    # Project dependencies
 └── README.md          # Project documentation
@@ -34,10 +36,20 @@ cd spokhandSLR
 pip install -r requirements.txt
 ```
 
+3. Set up AWS credentials:
+   - Create a `.env` file in the project root
+   - Add the following variables:
+   ```
+   AWS_ACCESS_KEY_ID=your_access_key_here
+   AWS_SECRET_ACCESS_KEY=your_secret_key_here
+   AWS_REGION=us-east-1
+   S3_BUCKET_NAME=spokhand-data
+   ```
+
 ## Usage
 1. Run the main application:
 ```bash
-python src/main.py
+streamlit run src/main.py
 ```
 
 2. For data collection:
@@ -56,6 +68,8 @@ python src/model_training.py
 - OpenCV
 - NumPy
 - TensorFlow
+- Streamlit
+- AWS SDK (boto3)
 - Other dependencies listed in requirements.txt
 
 ## License
@@ -67,3 +81,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## Acknowledgments
 - MediaPipe for hand tracking capabilities
 - OpenCV for computer vision support
+- AWS for cloud storage and processing
