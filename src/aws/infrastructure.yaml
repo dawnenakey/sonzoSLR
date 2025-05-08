@@ -1,21 +1,13 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Spokhand Sign Language Recognition Infrastructure'
 
-Resources:
-  # S3 Bucket for storing data
-  SpokhandDataBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: spokhand-data
-      AccessControl: Private
-      VersioningConfiguration:
-        Status: Enabled
-      LifecycleConfiguration:
-        Rules:
-          - Id: DeleteOldData
-            Status: Enabled
-            ExpirationInDays: 90
+Parameters:
+  BucketName:
+    Type: String
+    Default: spokhand-data
+    Description: Name of the existing S3 bucket
 
+Resources:
   # Lambda Function for processing
   SignLanguageProcessor:
     Type: AWS::Lambda::Function
@@ -24,12 +16,12 @@ Resources:
       Runtime: python3.9
       Handler: lambda_function.lambda_handler
       Code:
-        S3Bucket: !Sub '${SpokhandDataBucket}'
+        S3Bucket: !Ref BucketName
         S3Key: lambda/lambda_function.zip
       Role: !GetAtt LambdaExecutionRole.Arn
       Environment:
         Variables:
-          S3_BUCKET_NAME: !Ref SpokhandDataBucket
+          S3_BUCKET_NAME: !Ref BucketName
       Timeout: 300
       MemorySize: 512
 
@@ -55,7 +47,7 @@ Resources:
                 Action:
                   - s3:GetObject
                   - s3:PutObject
-                Resource: !Sub 'arn:aws:s3:::${SpokhandDataBucket}/*'
+                Resource: !Sub 'arn:aws:s3:::${BucketName}/*'
 
   # S3 Event Notification to Lambda
   S3ToLambdaPermission:
@@ -65,22 +57,29 @@ Resources:
       FunctionName: !GetAtt SignLanguageProcessor.Arn
       Principal: s3.amazonaws.com
       SourceAccount: !Ref AWS::AccountId
-      SourceArn: !Sub 'arn:aws:s3:::${SpokhandDataBucket}'
+      SourceArn: !Sub 'arn:aws:s3:::${BucketName}'
 
-  # S3 Bucket Notification Configuration
-  S3BucketNotification:
-    Type: AWS::S3::Bucket
+  # Add notification configuration to the existing bucket
+  BucketNotificationConfig:
+    Type: AWS::S3::BucketPolicy
     Properties:
-      Bucket: !Ref SpokhandDataBucket
-      NotificationConfiguration:
-        LambdaConfigurations:
-          - Event: s3:ObjectCreated:*
-            Function: !GetAtt SignLanguageProcessor.Arn
+      Bucket: !Ref BucketName
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowLambdaInvocation
+            Effect: Allow
+            Principal:
+              Service: s3.amazonaws.com
+            Action: 
+              - s3:PutObject
+              - s3:GetObject
+            Resource: !Sub 'arn:aws:s3:::${BucketName}/*'
 
 Outputs:
-  S3BucketName:
-    Description: Name of the S3 bucket
-    Value: !Ref SpokhandDataBucket
   LambdaFunctionName:
     Description: Name of the Lambda function
-    Value: !Ref SignLanguageProcessor 
+    Value: !Ref SignLanguageProcessor
+  LambdaFunctionArn:
+    Description: ARN of the Lambda function
+    Value: !GetAtt SignLanguageProcessor.Arn 
