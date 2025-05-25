@@ -1,6 +1,7 @@
 """
 Main Streamlit app entry point for OAK camera streaming.
 """
+import streamlit as st
 import sys
 from pathlib import Path
 
@@ -9,82 +10,80 @@ project_root = str(Path(__file__).parent)
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-import streamlit as st
-import cv2
-import numpy as np
-from src.camera.oak_camera_handler import OAKCameraHandler
-import time
-
-# Create directories for saving data
-DATA_DIR = Path("data/collected")
-DATA_DIR.mkdir(parents=True, exist_ok=True)
-
 def main():
     st.title("OAK Camera Data Collection")
     
-    # Initialize session state
-    if 'camera_handler' not in st.session_state:
-        st.session_state.camera_handler = OAKCameraHandler()
+    # System check section
+    st.sidebar.title("System Check")
     
-    # Sidebar controls
-    st.sidebar.title("Controls")
+    # Check if running on Linux
+    is_linux = sys.platform.startswith('linux')
+    st.sidebar.write(f"Operating System: {'Linux' if is_linux else 'Non-Linux'}")
     
-    if st.sidebar.button("Start Camera"):
-        try:
-            if st.session_state.camera_handler.connect():
-                st.success("Camera connected successfully!")
-            else:
-                st.error("Failed to connect to camera")
-        except Exception as e:
-            st.error(f"Error connecting to camera: {str(e)}")
-    
-    if st.sidebar.button("Stop Camera"):
-        try:
-            st.session_state.camera_handler.stop_streaming()
-            st.success("Camera stopped successfully!")
-        except Exception as e:
-            st.error(f"Error stopping camera: {str(e)}")
+    if not is_linux:
+        st.warning("""
+        ⚠️ This application requires Linux for OAK camera operation.
+        Please ensure you're running this on a Linux system with the OAK camera connected.
+        """)
     
     # Main content area
-    st.write("### Camera Feed")
+    st.write("### Camera Status")
     
-    # Create a placeholder for the camera feed
-    camera_placeholder = st.empty()
-    
-    # Stream the camera feed
-    if st.session_state.camera_handler.device:
+    if is_linux:
         try:
-            for frame in st.session_state.camera_handler.start_streaming():
-                # Convert frame to RGB for Streamlit
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                camera_placeholder.image(frame_rgb, channels="RGB", use_column_width=True)
+            # Only import OAK camera handler if on Linux
+            from src.camera.oak_camera_handler import OAKCameraHandler
+            
+            # Initialize session state
+            if 'camera_handler' not in st.session_state:
+                st.session_state.camera_handler = OAKCameraHandler()
+            
+            if st.sidebar.button("Start Camera"):
+                try:
+                    if st.session_state.camera_handler.connect():
+                        st.success("Camera connected successfully!")
+                    else:
+                        st.error("Failed to connect to camera")
+                except Exception as e:
+                    st.error(f"Error connecting to camera: {str(e)}")
+            
+            if st.sidebar.button("Stop Camera"):
+                try:
+                    st.session_state.camera_handler.stop_streaming()
+                    st.success("Camera stopped successfully!")
+                except Exception as e:
+                    st.error(f"Error stopping camera: {str(e)}")
+            
+            # Camera feed section
+            st.write("### Camera Feed")
+            camera_placeholder = st.empty()
+            
+            if st.session_state.camera_handler.device:
+                try:
+                    for frame in st.session_state.camera_handler.start_streaming():
+                        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        camera_placeholder.image(frame_rgb, channels="RGB", use_column_width=True)
+                except Exception as e:
+                    st.error(f"Error streaming camera: {str(e)}")
+            else:
+                st.info("Click 'Start Camera' to begin streaming")
                 
-                # Add a small delay to prevent overwhelming the system
-                time.sleep(0.1)
-        except Exception as e:
-            st.error(f"Error streaming camera: {str(e)}")
+        except ImportError as e:
+            st.error(f"""
+            Error importing OAK camera dependencies: {str(e)}
+            
+            Please ensure you have installed all required dependencies:
+            ```
+            pip install -r requirements.txt
+            ```
+            """)
     else:
-        st.info("Click 'Start Camera' to begin streaming")
-    
-    # Data collection section
-    st.write("### Data Collection")
-    
-    if st.button("Capture Frame"):
-        if st.session_state.camera_handler.device:
-            try:
-                # Get the latest frame
-                frame = next(st.session_state.camera_handler.start_streaming())
-                
-                # Save the frame
-                timestamp = time.strftime("%Y%m%d-%H%M%S")
-                filename = DATA_DIR / f"frame_{timestamp}.jpg"
-                cv2.imwrite(str(filename), frame)
-                
-                st.success(f"Frame saved as {filename}")
-            except Exception as e:
-                st.error(f"Error capturing frame: {str(e)}")
-        else:
-            st.warning("Please start the camera first")
+        st.info("""
+        To use the OAK camera:
+        1. Connect the OAK camera to a Linux system
+        2. Install the required dependencies
+        3. Run this application on that system
+        """)
 
 if __name__ == "__main__":
     main() 
