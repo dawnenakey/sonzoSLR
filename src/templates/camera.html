@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OAK Camera Stream</title>
+    <style>
+        .camera-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .camera-feed {
+            width: 100%;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 0 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="camera-container">
+        <h1>OAK Camera Stream</h1>
+        <img id="camera-feed" class="camera-feed" src="/camera/stream" alt="Camera Feed">
+        <div class="controls">
+            <button onclick="stopCamera()">Stop Camera</button>
+        </div>
+    </div>
+
+    <script>
+        async function stopCamera() {
+            try {
+                const response = await fetch('/camera/stop', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                alert(data.message);
+            } catch (error) {
+                console.error('Error stopping camera:', error);
+                alert('Error stopping camera');
+            }
+        }
+    </script>
+</body>
+</html> 
