@@ -123,3 +123,36 @@ For more information about Spokhand and our mission, visit [spokhand.org](https:
 ## Result Interpretation / Impact
 - **Model Performance**: Model accuracy, loss, and other metrics are logged during training and validation. Results are interpreted in the context of real-world sign language recognition tasks, with a focus on both quantitative metrics and qualitative feedback from Deaf community members.
 - **Impact**: The project aims to set a new standard for accessible, ethical, and community-driven sign language technology. By providing open, annotated datasets and robust ML models, Spokhand empowers researchers, developers, and accessibility advocates to build inclusive tools for global impact.
+
+## Data Setup
+
+### 1. Extract WLASL Data
+The WLASL dataset is included as a submodule in this repository. To set up the data:
+
+```bash
+# Clone the repository with submodules
+git clone --recurse-submodules https://github.com/dawnenakey/spokhandSLR.git
+cd spokhandSLR
+
+# If you already cloned without submodules, run:
+git submodule update --init --recursive
+
+# Create data directories
+mkdir -p data/raw
+mkdir -p data/processed
+
+# Extract sample data (first 5 videos)
+python WLASL/download_wlasl_samples.py
+```
+
+### 2. Data Structure
+After extraction, your data directory will contain:
+- `data/raw/`: Original video files and annotations
+- `data/processed/`: Processed data ready for model training
+- `data/collected/`: Your collected sign language data
+
+### 3. Model Training
+Once the data is extracted, you can train the model using:
+```bash
+python src/train.py
+```
