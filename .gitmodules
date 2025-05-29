@@ -1,0 +1,3 @@
+[submodule "WLASL"]
+	path = WLASL
+	url = https://github.com/dawnenakey/WLASL.git

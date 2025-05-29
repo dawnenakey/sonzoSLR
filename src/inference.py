@@ -1,7 +1,6 @@
 import torch
 import numpy as np
 import cv2
-from depthai import Pipeline, Device
 import boto3
 import json
 import logging
@@ -18,22 +17,13 @@ class SignLanguageInference:
         self.model = self._load_model(model_path)
         self.model.eval()
         
-        # Initialize OAK camera
-        self.pipeline = Pipeline()
-        self.cam = self.pipeline.createColorCamera()
-        self.cam.setPreviewSize(640, 480)
-        self.cam.setResolution(depthai.ColorCameraProperties.SensorResolution.THE_1080_P)
-        self.cam.setInterleaved(False)
-        
-        # Initialize S3 client for logging
-        self.s3 = boto3.client('s3')
-        
     def _load_model(self, model_path):
         """Load the trained model"""
         if model_path.startswith('s3://'):
             # Download from S3
             bucket, key = model_path.replace('s3://', '').split('/', 1)
             local_path = f'/tmp/{os.path.basename(key)}'
+            self.s3 = boto3.client('s3')
             self.s3.download_file(bucket, key, local_path)
             model_path = local_path
             
@@ -68,60 +58,56 @@ class SignLanguageInference:
     
     def run_inference(self, save_video=True):
         """Run real-time inference with OAK camera"""
-        with Device(self.pipeline) as device:
-            # Get output queue
-            q = device.getOutputQueue("preview", maxSize=4, blocking=False)
+        # Initialize video writer if needed
+        if save_video:
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            out = cv2.VideoWriter(
+                f'inference_{datetime.now().strftime("%Y%m%d_%H%M%S")}.mp4',
+                fourcc,
+                30.0,
+                (640, 480)
+            )
+        
+        # Buffer for frames
+        frame_buffer = []
+        buffer_size = 16  # Number of frames to process at once
+        
+        while True:
+            # Get frame from OAK camera
+            frame = q.get()
+            frame = frame.getCvFrame()
             
-            # Initialize video writer if needed
+            # Add to buffer
+            frame_buffer.append(frame)
+            if len(frame_buffer) > buffer_size:
+                frame_buffer.pop(0)
+            
+            # Process when buffer is full
+            if len(frame_buffer) == buffer_size:
+                prediction, confidence = self.predict(frame_buffer)
+                
+                # Log prediction
+                logger.info(f'Prediction: {prediction}, Confidence: {confidence:.2f}')
+                
+                # Save to S3 if confidence is high
+                if confidence > 0.8:
+                    self._save_prediction(frame_buffer, prediction, confidence)
+            
+            # Display frame
+            cv2.imshow('Sign Language Recognition', frame)
+            
+            # Save frame if needed
             if save_video:
-                fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-                out = cv2.VideoWriter(
-                    f'inference_{datetime.now().strftime("%Y%m%d_%H%M%S")}.mp4',
-                    fourcc,
-                    30.0,
-                    (640, 480)
-                )
+                out.write(frame)
             
-            # Buffer for frames
-            frame_buffer = []
-            buffer_size = 16  # Number of frames to process at once
-            
-            while True:
-                # Get frame from OAK camera
-                frame = q.get()
-                frame = frame.getCvFrame()
-                
-                # Add to buffer
-                frame_buffer.append(frame)
-                if len(frame_buffer) > buffer_size:
-                    frame_buffer.pop(0)
-                
-                # Process when buffer is full
-                if len(frame_buffer) == buffer_size:
-                    prediction, confidence = self.predict(frame_buffer)
-                    
-                    # Log prediction
-                    logger.info(f'Prediction: {prediction}, Confidence: {confidence:.2f}')
-                    
-                    # Save to S3 if confidence is high
-                    if confidence > 0.8:
-                        self._save_prediction(frame_buffer, prediction, confidence)
-                
-                # Display frame
-                cv2.imshow('Sign Language Recognition', frame)
-                
-                # Save frame if needed
-                if save_video:
-                    out.write(frame)
-                
-                # Break on 'q' press
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
-            
-            # Cleanup
-            if save_video:
-                out.release()
-            cv2.destroyAllWindows()
+            # Break on 'q' press
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+        
+        # Cleanup
+        if save_video:
+            out.release()
+        cv2.destroyAllWindows()
     
     def _save_prediction(self, frames, prediction, confidence):
         """Save prediction results to S3"""

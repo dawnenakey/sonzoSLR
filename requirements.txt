@@ -1,14 +1,13 @@
-streamlit==1.32.0
-boto3==1.34.69
-botocore==1.34.69
-opencv-python-headless==4.8.1.78
-numpy==1.26.4
+streamlit
+opencv-python
+boto3
+numpy
+pandas
 Pillow==10.2.0
 python-dotenv==1.0.1
-pandas==2.2.1
 pympi==1.70
 fastapi==0.104.1
 uvicorn==0.24.0
 python-multipart==0.0.6
-# OAK camera dependencies (Linux only)
-depthai==2.21.2.0; sys_platform == 'linux' 
+botocore==1.34.69
+depthai==2.21.2.0 
