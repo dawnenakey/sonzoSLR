@@ -145,3 +145,8 @@ Once the data is extracted, you can train the model using:
 ```bash
 python src/train.py
 ```
+
+## License
+
+This project is licensed under the terms of the MIT License.  
+See the [LICENSE](LICENSE) file for details.
