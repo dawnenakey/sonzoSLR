@@ -1,0 +1,21 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 80%    # Set your desired coverage target
+        threshold: 1%  # Allow 1% variation
+    patch:
+      default:
+        target: 80%
+        threshold: 1%
+
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default
+  require_changes: false
+
+ignore:
+  - "src/tests/*"  # Ignore test files in coverage
+  - "**/__init__.py"
+  - "setup.py"
+  - "docs/*" 

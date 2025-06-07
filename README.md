@@ -1,5 +1,9 @@
 # Sign Language Recognition Platform
 
+[![Codecov](https://codecov.io/gh/dawnenakey/spokhandSLR/branch/main/graph/badge.svg)](https://codecov.io/gh/dawnenakey/spokhandSLR)
+[![Python Tests](https://github.com/dawnenakey/spokhandSLR/actions/workflows/tests.yml/badge.svg)](https://github.com/dawnenakey/spokhandSLR/actions/workflows/tests.yml)
+[![Lint](https://github.com/dawnenakey/spokhandSLR/actions/workflows/lint.yml/badge.svg)](https://github.com/dawnenakey/spokhandSLR/actions/workflows/lint.yml)
+
 This project is a Streamlit web app for sign language recognition and model evaluation, built for the Masters of Data Science Capstone 2025 by Dawnena Key.
 
 ## Overview
@@ -58,12 +62,52 @@ Project by Dawnena Key, Masters of Data Science Capstone 2025
 For questions, please contact dawnena@icloud.com.
 
 ## How to Run Tests
-1. Ensure you have all dependencies installed (see requirements.txt).
-2. From the project root, run:
+
+### Automated Testing
+The project uses GitHub Actions for automated testing and code quality checks. Every push and pull request triggers:
+- Unit and integration tests
+- Code coverage reporting
+- Code linting and formatting checks
+
+### Running Tests Locally
+1. Install development dependencies:
+   ```bash
+   pip install -r requirements.txt
    ```
+
+2. Run all tests:
+   ```bash
    pytest src/tests/
    ```
-   This will discover and run all test scripts in the `/tests` folder.
+
+3. Run tests with coverage:
+   ```bash
+   pytest src/tests/ --cov=src --cov-report=term-missing
+   ```
+
+4. Run specific test categories:
+   ```bash
+   # Run only unit tests
+   pytest src/tests/ -m "not integration"
+   
+   # Run only integration tests
+   pytest src/tests/ -m "integration"
+   ```
+
+5. Run code quality checks:
+   ```bash
+   # Format code
+   black .
+   
+   # Sort imports
+   isort .
+   
+   # Check code style
+   flake8 .
+   
+   # Type checking
+   mypy src/
+   ```
 
 ## Result Interpretation / Impact
 - **Model Performance**: Model accuracy, loss, and other metrics are logged during training and validation. Results are interpreted in the context of real-world sign language recognition tasks, with a focus on both quantitative metrics and qualitative feedback from Deaf community members.
