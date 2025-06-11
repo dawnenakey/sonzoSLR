@@ -3,26 +3,28 @@ Streamlit app for Sign Language Recognition and Analysis.
 This application provides a user interface for uploading and analyzing sign language videos
 using a trained 3D CNN + LSTM model.
 """
+# =====================
+# Temporarily commenting out ML dependencies and code for Streamlit Cloud compatibility.
+# To restore for AWS, uncomment the relevant sections.
+# =====================
+
 import streamlit as st
-import numpy as np
-import plotly.graph_objects as go
-import plotly.express as px
-from plotly.subplots import make_subplots
 import pandas as pd
-import time
-import os
-import joblib
-from sklearn.metrics import roc_curve, auc
-import torch
-import cv2
-import tempfile
-from typing import Tuple, Optional, Dict, Any
-from src.train import SignLanguageModel, SignLanguageDataset
 import depthai as dai
-import threading
+import cv2
 from queue import Queue
-import time
-import gdown
+import threading
+# import torch  # ML: Commented out
+# import joblib  # ML: Commented out
+# from src.train import SignLanguageModel, SignLanguageDataset  # ML: Commented out
+# import numpy as np  # Only needed for ML
+# import plotly.graph_objects as go  # Only needed for ML
+# import plotly.express as px  # Only needed for ML
+# from plotly.subplots import make_subplots  # Only needed for ML
+# import time  # Only needed for ML
+# from typing import Tuple, Optional, Dict, Any  # Only needed for ML
+# import os  # Only needed for ML
+# import gdown  # Only needed for ML
 
 class ModelLoadingError(Exception):
     """Custom exception for model loading errors."""
@@ -367,7 +369,7 @@ def process_oak_frames(device: dai.Device, frame_queue: Queue, stop_event: threa
 def main() -> None:
     """Main application entry point."""
     try:
-        st.set_page_config(page_title="Sign Language Recognition Demo", layout="wide")
+        st.set_page_config(page_title="OAK Camera and Annotation Viewer", layout="wide")
         
         # Download model if not present
         download_model_from_gdrive()
@@ -379,133 +381,39 @@ def main() -> None:
             st.markdown("---")
             st.info("Project by Dawnena Key, Masters of Data Science Capstone 2025")
         
-        st.title("Sign Language Recognition Platform")
+        st.title("OAK Camera and Annotation Viewer")
         
-        # Load model
-        model, class_mapping = load_model()
-        if model is None or class_mapping is None:
-            st.error("Failed to load model. Please ensure the model file exists and training is complete.")
-            return
-        
-        # Input method selection
-        input_method = st.radio("Choose input method:", ["Upload Video", "Live Camera"])
-        
-        if input_method == "Upload Video":
-            # File uploader for video files
-            uploaded_file = st.file_uploader(
-                "Upload a sign language video file (MP4, AVI, or MOV format)",
-                type=['mp4', 'avi', 'mov']
-            )
-            
-            if uploaded_file:
-                st.success(f"Video file {uploaded_file.name} uploaded successfully!")
-                
-                # Save uploaded file temporarily
-                try:
-                    with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_file:
-                        tmp_file.write(uploaded_file.read())
-                        video_path = tmp_file.name
-                except Exception as e:
-                    st.error(f"Error saving uploaded file: {e}")
-                    return
-                
-                try:
-                    # Process video
-                    frames = process_video(video_path)
-                    if frames is not None:
-                        # Make prediction
-                        start_time = time.time()
-                        try:
-                            with torch.no_grad():
-                                output = model(frames)
-                                probabilities = torch.softmax(output, dim=1)
-                                pred_class = torch.argmax(probabilities, dim=1).item()
-                                confidence = probabilities[0][pred_class].item()
-                        except RuntimeError as e:
-                            st.error(f"Error during model inference: {e}")
-                            return
-                            
-                        inference_time = time.time() - start_time
-                        
-                        # Display results
-                        st.metric("Inference Time (s)", f"{inference_time:.2f}")
-                        st.write(f"**Predicted Sign:** {class_mapping[pred_class]}")
-                        st.write(f"**Confidence:** {confidence:.2%}")
-                        
-                        # Show confidence for all classes
-                        st.subheader("Confidence Scores")
-                        for i, (label, name) in enumerate(class_mapping.items()):
-                            st.write(f"{name}: {probabilities[0][i].item():.2%}")
-                        
-                        # Show video
-                        st.video(uploaded_file)
-                    
-                except Exception as e:
-                    st.error(f"Error during prediction: {e}")
-                finally:
-                    # Clean up temporary file
-                    try:
-                        os.unlink(video_path)
-                    except Exception as e:
-                        st.warning(f"Failed to clean up temporary file: {e}")
-        
-        else:  # Live Camera
-            st.write("Connecting to OAK camera...")
-            
-            # Initialize camera
+        # OAK camera section
+        st.header("OAK Camera Feed")
+        if st.button("Connect to OAK Camera"):
             device = connect_oak_camera()
             if device is None:
-                st.error("Failed to connect to OAK camera. Please check the connection and try again.")
+                st.error("Failed to connect to OAK camera.")
                 return
-                
             st.success("Connected to OAK camera!")
-            
-            # Initialize frame processing
-            frame_queue = Queue(maxsize=30)  # Store last 30 frames
+            frame_queue = Queue(maxsize=30)
             stop_event = threading.Event()
-            
-            # Start frame processing thread
-            process_thread = threading.Thread(
-                target=process_oak_frames,
-                args=(device, frame_queue, stop_event)
-            )
+            process_thread = threading.Thread(target=process_oak_frames, args=(device, frame_queue, stop_event))
             process_thread.start()
-            
-            # Create placeholders for video feed and predictions
             video_placeholder = st.empty()
-            prediction_placeholder = st.empty()
-            
             try:
                 while True:
-                    # Get latest frame
                     if not frame_queue.empty():
                         frame = frame_queue.get()
                         video_placeholder.image(frame, channels="RGB")
-                        
-                        # Process frame for prediction
-                        frame_tensor = torch.from_numpy(frame).float() / 255.0
-                        frame_tensor = frame_tensor.permute(2, 0, 1).unsqueeze(0)
-                        
-                        # Make prediction
-                        with torch.no_grad():
-                            output = model(frame_tensor)
-                            probabilities = torch.softmax(output, dim=1)
-                            pred_class = torch.argmax(probabilities, dim=1).item()
-                            confidence = probabilities[0][pred_class].item()
-                            
-                        # Display prediction
-                        prediction_placeholder.write(f"**Predicted Sign:** {class_mapping[pred_class]}")
-                        prediction_placeholder.write(f"**Confidence:** {confidence:.2%}")
-                        
-                    time.sleep(0.1)  # Small delay to prevent UI freezing
-                    
             except Exception as e:
-                st.error(f"Error during live prediction: {e}")
+                st.error(f"Error during live camera feed: {e}")
             finally:
-                # Clean up
                 stop_event.set()
                 process_thread.join()
                 device.close()
+        
+        # Annotation file section
+        st.header("View Annotations")
+        uploaded_file = st.file_uploader("Upload annotation CSV", type=["csv"])
+        if uploaded_file:
+            df = pd.read_csv(uploaded_file)
+            st.dataframe(df)
         
         # Model Architecture and Analytics
         st.header("Model Architecture and Analytics")

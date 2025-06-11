@@ -1,5 +1,9 @@
 # Sign Language Recognition Platform
 
+## Live Demo
+
+[Try the app on Streamlit Cloud](https://spokhand.streamlit.app)
+
 [![Codecov](https://codecov.io/gh/dawnenakey/spokhandSLR/branch/main/graph/badge.svg)](https://codecov.io/gh/dawnenakey/spokhandSLR)
 [![Python Tests](https://github.com/dawnenakey/spokhandSLR/actions/workflows/tests.yml/badge.svg)](https://github.com/dawnenakey/spokhandSLR/actions/workflows/tests.yml)
 [![Lint](https://github.com/dawnenakey/spokhandSLR/actions/workflows/lint.yml/badge.svg)](https://github.com/dawnenakey/spokhandSLR/actions/workflows/lint.yml)
