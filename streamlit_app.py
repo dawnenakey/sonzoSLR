@@ -18,6 +18,11 @@ import cv2
 import tempfile
 from typing import Tuple, Optional, Dict, Any
 from src.train import SignLanguageModel, SignLanguageDataset
+import depthai as dai
+import threading
+from queue import Queue
+import time
+import gdown
 
 class ModelLoadingError(Exception):
     """Custom exception for model loading errors."""
@@ -26,6 +31,13 @@ class ModelLoadingError(Exception):
 class VideoProcessingError(Exception):
     """Custom exception for video processing errors."""
     pass
+
+def download_model_from_gdrive():
+    model_path = "best_model.pth"
+    if not os.path.exists(model_path):
+        file_id = "1iO4UmEZtvRsPt68K_2-BL0jrYU8sgBjR"
+        url = f"https://drive.google.com/uc?id={file_id}"
+        gdown.download(url, model_path, quiet=False)
 
 def load_model() -> Tuple[Optional[SignLanguageModel], Optional[Dict[int, str]]]:
     """
@@ -296,20 +308,78 @@ def display_training_metrics() -> None:
     except Exception as e:
         st.error(f"Error displaying training metrics: {e}")
 
+def connect_oak_camera() -> Optional[dai.Device]:
+    """
+    Connect to OAK camera and initialize the pipeline.
+    
+    Returns:
+        Optional[dai.Device]: Connected OAK device or None if connection fails.
+    """
+    try:
+        # Create pipeline
+        pipeline = dai.Pipeline()
+        
+        # Define sources and outputs
+        cam_rgb = pipeline.create(dai.node.ColorCamera)
+        xout_rgb = pipeline.create(dai.node.XLinkOut)
+        
+        xout_rgb.setStreamName("rgb")
+        
+        # Properties
+        cam_rgb.setPreviewSize(224, 224)
+        cam_rgb.setBoardSocket(dai.CameraBoardSocket.RGB)
+        cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+        cam_rgb.setInterleaved(False)
+        cam_rgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
+        
+        # Linking
+        cam_rgb.preview.link(xout_rgb.input)
+        
+        # Connect to device
+        device = dai.Device(pipeline)
+        return device
+    except Exception as e:
+        st.error(f"Failed to connect to OAK camera: {e}")
+        return None
+
+def process_oak_frames(device: dai.Device, frame_queue: Queue, stop_event: threading.Event) -> None:
+    """
+    Process frames from OAK camera in a separate thread.
+    
+    Args:
+        device (dai.Device): Connected OAK device
+        frame_queue (Queue): Queue to store processed frames
+        stop_event (threading.Event): Event to signal thread to stop
+    """
+    try:
+        q_rgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
+        
+        while not stop_event.is_set():
+            in_rgb = q_rgb.tryGet()
+            if in_rgb is not None:
+                frame = in_rgb.getCvFrame()
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                frame_queue.put(frame)
+            time.sleep(0.01)  # Small delay to prevent CPU overload
+    except Exception as e:
+        st.error(f"Error in OAK frame processing: {e}")
+
 def main() -> None:
     """Main application entry point."""
     try:
         st.set_page_config(page_title="Sign Language Recognition Demo", layout="wide")
         
+        # Download model if not present
+        download_model_from_gdrive()
+        
         # Sidebar
         with st.sidebar:
             st.title("SLR Capstone Demo")
-            st.markdown("**Instructions:**\n1. Upload a sign language video.\n2. View model predictions and metrics.\n3. Explore architecture and analytics in the tabs.")
+            st.markdown("**Instructions:**\n1. Choose input method (Upload or Live Camera)\n2. View model predictions and metrics.\n3. Explore architecture and analytics in the tabs.")
             st.markdown("---")
             st.info("Project by Dawnena Key, Masters of Data Science Capstone 2025")
         
         st.title("Sign Language Recognition Platform")
-        st.write("Upload sign language videos for analysis and recognition. This demo showcases model predictions, evaluation metrics, and architecture visualizations for your capstone presentation.")
         
         # Load model
         model, class_mapping = load_model()
@@ -317,63 +387,125 @@ def main() -> None:
             st.error("Failed to load model. Please ensure the model file exists and training is complete.")
             return
         
-        # File uploader for video files
-        uploaded_file = st.file_uploader(
-            "Upload a sign language video file (MP4, AVI, or MOV format)",
-            type=['mp4', 'avi', 'mov']
-        )
+        # Input method selection
+        input_method = st.radio("Choose input method:", ["Upload Video", "Live Camera"])
         
-        if uploaded_file:
-            st.success(f"Video file {uploaded_file.name} uploaded successfully!")
+        if input_method == "Upload Video":
+            # File uploader for video files
+            uploaded_file = st.file_uploader(
+                "Upload a sign language video file (MP4, AVI, or MOV format)",
+                type=['mp4', 'avi', 'mov']
+            )
             
-            # Save uploaded file temporarily
-            try:
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_file:
-                    tmp_file.write(uploaded_file.read())
-                    video_path = tmp_file.name
-            except Exception as e:
-                st.error(f"Error saving uploaded file: {e}")
-                return
-            
-            try:
-                # Process video
-                frames = process_video(video_path)
-                if frames is not None:
-                    # Make prediction
-                    start_time = time.time()
+            if uploaded_file:
+                st.success(f"Video file {uploaded_file.name} uploaded successfully!")
+                
+                # Save uploaded file temporarily
+                try:
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_file:
+                        tmp_file.write(uploaded_file.read())
+                        video_path = tmp_file.name
+                except Exception as e:
+                    st.error(f"Error saving uploaded file: {e}")
+                    return
+                
+                try:
+                    # Process video
+                    frames = process_video(video_path)
+                    if frames is not None:
+                        # Make prediction
+                        start_time = time.time()
+                        try:
+                            with torch.no_grad():
+                                output = model(frames)
+                                probabilities = torch.softmax(output, dim=1)
+                                pred_class = torch.argmax(probabilities, dim=1).item()
+                                confidence = probabilities[0][pred_class].item()
+                        except RuntimeError as e:
+                            st.error(f"Error during model inference: {e}")
+                            return
+                            
+                        inference_time = time.time() - start_time
+                        
+                        # Display results
+                        st.metric("Inference Time (s)", f"{inference_time:.2f}")
+                        st.write(f"**Predicted Sign:** {class_mapping[pred_class]}")
+                        st.write(f"**Confidence:** {confidence:.2%}")
+                        
+                        # Show confidence for all classes
+                        st.subheader("Confidence Scores")
+                        for i, (label, name) in enumerate(class_mapping.items()):
+                            st.write(f"{name}: {probabilities[0][i].item():.2%}")
+                        
+                        # Show video
+                        st.video(uploaded_file)
+                    
+                except Exception as e:
+                    st.error(f"Error during prediction: {e}")
+                finally:
+                    # Clean up temporary file
                     try:
+                        os.unlink(video_path)
+                    except Exception as e:
+                        st.warning(f"Failed to clean up temporary file: {e}")
+        
+        else:  # Live Camera
+            st.write("Connecting to OAK camera...")
+            
+            # Initialize camera
+            device = connect_oak_camera()
+            if device is None:
+                st.error("Failed to connect to OAK camera. Please check the connection and try again.")
+                return
+                
+            st.success("Connected to OAK camera!")
+            
+            # Initialize frame processing
+            frame_queue = Queue(maxsize=30)  # Store last 30 frames
+            stop_event = threading.Event()
+            
+            # Start frame processing thread
+            process_thread = threading.Thread(
+                target=process_oak_frames,
+                args=(device, frame_queue, stop_event)
+            )
+            process_thread.start()
+            
+            # Create placeholders for video feed and predictions
+            video_placeholder = st.empty()
+            prediction_placeholder = st.empty()
+            
+            try:
+                while True:
+                    # Get latest frame
+                    if not frame_queue.empty():
+                        frame = frame_queue.get()
+                        video_placeholder.image(frame, channels="RGB")
+                        
+                        # Process frame for prediction
+                        frame_tensor = torch.from_numpy(frame).float() / 255.0
+                        frame_tensor = frame_tensor.permute(2, 0, 1).unsqueeze(0)
+                        
+                        # Make prediction
                         with torch.no_grad():
-                            output = model(frames)
+                            output = model(frame_tensor)
                             probabilities = torch.softmax(output, dim=1)
                             pred_class = torch.argmax(probabilities, dim=1).item()
                             confidence = probabilities[0][pred_class].item()
-                    except RuntimeError as e:
-                        st.error(f"Error during model inference: {e}")
-                        return
+                            
+                        # Display prediction
+                        prediction_placeholder.write(f"**Predicted Sign:** {class_mapping[pred_class]}")
+                        prediction_placeholder.write(f"**Confidence:** {confidence:.2%}")
                         
-                    inference_time = time.time() - start_time
+                    time.sleep(0.1)  # Small delay to prevent UI freezing
                     
-                    # Display results
-                    st.metric("Inference Time (s)", f"{inference_time:.2f}")
-                    st.write(f"**Predicted Sign:** {class_mapping[pred_class]}")
-                    st.write(f"**Confidence:** {confidence:.2%}")
-                    
-                    # Show confidence for all classes
-                    st.subheader("Confidence Scores")
-                    for i, (label, name) in enumerate(class_mapping.items()):
-                        st.write(f"{name}: {probabilities[0][i].item():.2%}")
-                    
-                    # Show video
-                    st.video(uploaded_file)
-                
             except Exception as e:
-                st.error(f"Error during prediction: {e}")
+                st.error(f"Error during live prediction: {e}")
             finally:
-                # Clean up temporary file
-                try:
-                    os.unlink(video_path)
-                except Exception as e:
-                    st.warning(f"Failed to clean up temporary file: {e}")
+                # Clean up
+                stop_event.set()
+                process_thread.join()
+                device.close()
         
         # Model Architecture and Analytics
         st.header("Model Architecture and Analytics")
