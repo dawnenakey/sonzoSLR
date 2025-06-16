@@ -10,8 +10,14 @@ using a trained 3D CNN + LSTM model.
 
 import streamlit as st
 import pandas as pd
-import cv2
 import tempfile
+
+try:
+    import cv2
+    CV2_AVAILABLE = True
+except ImportError:
+    st.error("OpenCV (cv2) is not available. Some features may be limited.")
+    CV2_AVAILABLE = False
 
 # =====================
 # Streamlit app for MP4 upload and annotation viewing
