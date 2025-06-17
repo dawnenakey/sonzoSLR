@@ -1,3 +1,6 @@
+import streamlit as st
+st.set_page_config(page_title="Video Upload and Annotation Viewer", layout="wide")
+
 """
 Streamlit app for Sign Language Recognition and Analysis.
 This application provides a user interface for uploading and analyzing sign language videos
@@ -7,9 +10,6 @@ using a trained 3D CNN + LSTM model.
 # Temporarily commenting out ML dependencies and code for Streamlit Cloud compatibility.
 # To restore for AWS, uncomment the relevant sections.
 # =====================
-
-import streamlit as st
-st.set_page_config(page_title="Video Upload and Annotation Viewer", layout="wide")
 
 import pandas as pd
 import tempfile
