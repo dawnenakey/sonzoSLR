@@ -1,7 +1,7 @@
 # Core dependencies
 streamlit==1.32.0
 opencv-python==4.9.0.80
-numpy>=1.24.0
+numpy>=1.24.0,<2.0.0
 pandas==2.2.1
 
 # Testing dependencies
@@ -15,3 +15,6 @@ black==24.2.0
 flake8==7.0.0
 isort==5.13.2
 mypy==1.8.0
+
+# Python version constraint
+python_version >= "3.8" and < "3.12"
