@@ -1,4 +1,5 @@
 import streamlit as st
+# Setting page config as the first Streamlit command
 st.set_page_config(page_title="Video Upload and Annotation Viewer", layout="wide")
 
 """
