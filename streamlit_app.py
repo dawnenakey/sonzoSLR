@@ -9,6 +9,8 @@ using a trained 3D CNN + LSTM model.
 # =====================
 
 import streamlit as st
+st.set_page_config(page_title="Video Upload and Annotation Viewer", layout="wide")
+
 import pandas as pd
 import tempfile
 
@@ -23,7 +25,6 @@ except ImportError:
 # Streamlit app for MP4 upload and annotation viewing
 # =====================
 def main():
-    st.set_page_config(page_title="Video Upload and Annotation Viewer", layout="wide")
     st.title("Video Upload and Annotation Viewer")
 
     st.header("Instructions")
