@@ -15,6 +15,3 @@ black==24.2.0
 flake8==7.0.0
 isort==5.13.2
 mypy==1.8.0
-
-# Python version constraint
-python_version >= "3.8" and < "3.12"
