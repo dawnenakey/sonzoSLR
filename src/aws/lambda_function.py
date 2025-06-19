@@ -8,6 +8,9 @@ def lambda_handler(event, context):
     """
     AWS Lambda function to handle session management and video processing
     """
+    # Debug logging to see the event structure
+    print(f"Event received: {json.dumps(event, indent=2)}")
+    
     # Initialize DynamoDB client
     dynamodb = boto3.resource('dynamodb')
     table = dynamodb.Table(os.environ.get('DYNAMODB_TABLE', 'spokhand-data-collection'))
@@ -23,7 +26,10 @@ def lambda_handler(event, context):
     try:
         # Check if this is an API Gateway event
         if 'httpMethod' in event:
-            # Handle OPTIONS request for CORS
+            print(f"HTTP Method: {event['httpMethod']}")
+            print(f"Resource: {event.get('resource', 'No resource')}")
+            print(f"Path: {event.get('path', 'No path')}")
+            
             if event['httpMethod'] == 'OPTIONS':
                 return {
                     'statusCode': 200,
@@ -31,9 +37,10 @@ def lambda_handler(event, context):
                     'body': ''
                 }
             
-            if event['httpMethod'] == 'POST' and event['resource'] == '/sessions':
+            if event['httpMethod'] == 'POST' and event.get('resource') == '/sessions':
                 # Parse the request body
                 body = json.loads(event.get('body', '{}'))
+                print(f"Request body: {body}")
                 
                 # Generate session ID and timestamp
                 session_id = str(uuid.uuid4())
@@ -53,42 +60,31 @@ def lambda_handler(event, context):
                 table.put_item(Item=session_item)
                 
                 # Return success response with session details
-                return {
-                    'statusCode': 200,
-                    'headers': headers,
-                    'body': json.dumps({
-                        'success': True,
-                        'session': {
-                            'id': session_id,
-                            'name': session_item['name'],
-                            'description': session_item['description'],
-                            'createdAt': session_item['created_at'],
-                            'updatedAt': session_item['updated_at'],
-                            'status': session_item['status']
-                        }
-                    })
-                }
+                return json.dumps({
+                    'success': True,
+                    'session': {
+                        'id': session_id,
+                        'name': session_item['name'],
+                        'description': session_item['description'],
+                        'createdAt': session_item['created_at'],
+                        'updatedAt': session_item['updated_at'],
+                        'status': session_item['status']
+                    }
+                })
                 
         # Return error for unsupported methods
-        return {
-            'statusCode': 400,
-            'headers': headers,
-            'body': json.dumps({
-                'success': False,
-                'error': 'Unsupported method or resource'
-            })
-        }
+        return json.dumps({
+            'success': False,
+            'error': 'Unsupported method or resource'
+        })
                 
     except Exception as e:
         # Return error response
-        return {
-            'statusCode': 500,
-            'headers': headers,
-            'body': json.dumps({
-                'success': False,
-                'error': str(e)
-            })
-        }
+        print(f"Error: {str(e)}")
+        return json.dumps({
+            'success': False,
+            'error': str(e)
+        })
 
     # Handle S3 events (for video processing)
     if 'Records' in event:
