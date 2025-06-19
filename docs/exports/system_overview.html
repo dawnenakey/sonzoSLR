@@ -1,0 +1,89 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>System Overview</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body { margin: 20px; font-family: Arial, sans-serif; }
+        .diagram-container { 
+            border: 1px solid #ddd; 
+            padding: 20px; 
+            border-radius: 8px; 
+            background: white;
+        }
+        h1 { color: #2c3e50; }
+    </style>
+</head>
+<body>
+    <h1>System Overview</h1>
+    <div class="diagram-container">
+        <div class="mermaid">
+
+graph TB
+    subgraph "Client Layer"
+        UI[React Frontend<br/>Unified UI]
+    end
+    
+    subgraph "API Gateway Layer"
+        GW[API Gateway<br/>Load Balancer]
+    end
+    
+    subgraph "Microservices Layer"
+        subgraph "Core Services"
+            CS[Camera Service<br/>Real-time Processing]
+            AS[Annotation Service<br/>Sign-Cut Platform]
+            US[Upload Service<br/>Data Management]
+        end
+        
+        subgraph "Support Services"
+            SS[Storage Service<br/>File & Data Storage]
+            MS[ML Service<br/>Sign Recognition]
+            AN[Analytics Service<br/>Data Analysis]
+        end
+    end
+    
+    subgraph "Infrastructure Layer"
+        DB[(PostgreSQL<br/>Metadata)]
+        S3[(S3 Storage<br/>Videos & Files)]
+        RED[(Redis<br/>Cache & Sessions)]
+        MQ[(Message Queue<br/>Async Processing)]
+    end
+    
+    UI --> GW
+    GW --> CS
+    GW --> AS
+    GW --> US
+    GW --> SS
+    GW --> MS
+    GW --> AN
+    
+    CS --> SS
+    CS --> MS
+    AS --> SS
+    US --> SS
+    AN --> SS
+    
+    CS --> MQ
+    AS --> MQ
+    US --> MQ
+    
+    SS --> DB
+    SS --> S3
+    CS --> RED
+    AS --> RED
+        
+        </div>
+    </div>
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: { useMaxWidth: true, htmlLabels: true },
+            sequence: { useMaxWidth: true },
+            class: { useMaxWidth: true }
+        });
+    </script>
+</body>
+</html>
+    

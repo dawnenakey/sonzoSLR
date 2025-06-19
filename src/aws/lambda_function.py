@@ -1,17 +1,101 @@
 import json
 import boto3
 import os
+import uuid
 from datetime import datetime
 
 def lambda_handler(event, context):
     """
-    AWS Lambda function to process sign language data
+    AWS Lambda function to handle session management and video processing
     """
-    # Initialize S3 client
-    s3 = boto3.client('s3')
-    bucket_name = os.environ['S3_BUCKET_NAME']
+    # Initialize DynamoDB client
+    dynamodb = boto3.resource('dynamodb')
+    table = dynamodb.Table(os.environ.get('DYNAMODB_TABLE', 'spokhand-data-collection'))
+    
+    # CORS headers
+    headers = {
+        'Access-Control-Allow-Origin': '*',  # Update this to your frontend domain in production
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+        'Content-Type': 'application/json'
+    }
     
     try:
+        # Check if this is an API Gateway event
+        if 'httpMethod' in event:
+            # Handle OPTIONS request for CORS
+            if event['httpMethod'] == 'OPTIONS':
+                return {
+                    'statusCode': 200,
+                    'headers': headers,
+                    'body': ''
+                }
+            
+            if event['httpMethod'] == 'POST' and event['resource'] == '/sessions':
+                # Parse the request body
+                body = json.loads(event.get('body', '{}'))
+                
+                # Generate session ID and timestamp
+                session_id = str(uuid.uuid4())
+                timestamp = datetime.utcnow().isoformat()
+                
+                # Create session item
+                session_item = {
+                    'session_id': session_id,
+                    'name': body.get('name', 'Untitled Session'),
+                    'description': body.get('description', ''),
+                    'created_at': timestamp,
+                    'updated_at': timestamp,
+                    'status': 'active'
+                }
+                
+                # Save to DynamoDB
+                table.put_item(Item=session_item)
+                
+                # Return success response with session details
+                return {
+                    'statusCode': 200,
+                    'headers': headers,
+                    'body': json.dumps({
+                        'success': True,
+                        'session': {
+                            'id': session_id,
+                            'name': session_item['name'],
+                            'description': session_item['description'],
+                            'createdAt': session_item['created_at'],
+                            'updatedAt': session_item['updated_at'],
+                            'status': session_item['status']
+                        }
+                    })
+                }
+                
+        # Return error for unsupported methods
+        return {
+            'statusCode': 400,
+            'headers': headers,
+            'body': json.dumps({
+                'success': False,
+                'error': 'Unsupported method or resource'
+            })
+        }
+                
+    except Exception as e:
+        # Return error response
+        return {
+            'statusCode': 500,
+            'headers': headers,
+            'body': json.dumps({
+                'success': False,
+                'error': str(e)
+            })
+        }
+
+    # Handle S3 events (for video processing)
+    if 'Records' in event:
+        # Initialize S3 client
+        s3 = boto3.client('s3')
+        bucket_name = os.environ['S3_BUCKET_NAME']
+        
         # Get the uploaded file details from the event
         records = event.get('Records', [])
         for record in records:
@@ -47,11 +131,4 @@ def lambda_handler(event, context):
         return {
             'statusCode': 200,
             'body': json.dumps('Processing completed successfully')
-        }
-        
-    except Exception as e:
-        print(f"Error processing file: {str(e)}")
-        return {
-            'statusCode': 500,
-            'body': json.dumps(f'Error: {str(e)}')
         } 

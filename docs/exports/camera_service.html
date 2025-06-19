@@ -1,0 +1,74 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Camera Service Architecture</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body { margin: 20px; font-family: Arial, sans-serif; }
+        .diagram-container { 
+            border: 1px solid #ddd; 
+            padding: 20px; 
+            border-radius: 8px; 
+            background: white;
+        }
+        h1 { color: #2c3e50; }
+    </style>
+</head>
+<body>
+    <h1>Camera Service Architecture</h1>
+    <div class="diagram-container">
+        <div class="mermaid">
+
+classDiagram
+    class CameraService {
+        +startSession(cameraType, settings)
+        +stopSession(sessionId)
+        +getStream(sessionId)
+        +recordSign(sessionId, signName)
+    }
+    
+    class CameraSession {
+        -sessionId: UUID
+        -cameraType: string
+        -settings: object
+        -status: string
+        +initialize()
+        +startRecording()
+        +stopRecording()
+        +getStatus()
+    }
+    
+    class HandTracker {
+        -model: MediaPipe
+        +trackHands(frame)
+        +getLandmarks()
+        +calculateConfidence()
+    }
+    
+    class VideoRecorder {
+        -outputPath: string
+        -codec: string
+        +startRecording()
+        +stopRecording()
+        +saveVideo()
+    }
+    
+    CameraService --> CameraSession
+    CameraSession --> HandTracker
+    CameraSession --> VideoRecorder
+        
+        </div>
+    </div>
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: { useMaxWidth: true, htmlLabels: true },
+            sequence: { useMaxWidth: true },
+            class: { useMaxWidth: true }
+        });
+    </script>
+</body>
+</html>
+    

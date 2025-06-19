@@ -1,0 +1,165 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'SpokHand SLR Remote Data Collection Infrastructure'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: 'dev'
+    AllowedValues: ['dev', 'staging', 'prod']
+    Description: Environment name
+
+Resources:
+  # S3 Bucket for video storage
+  VideoStorageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'spokhand-video-storage-${Environment}-${AWS::AccountId}'
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldVideos
+            Status: Enabled
+            ExpirationInDays: 365
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # DynamoDB for metadata storage
+  DataCollectionTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'spokhand-data-collection-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: session_id
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
+        - AttributeName: user_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: session_id
+          KeyType: HASH
+        - AttributeName: timestamp
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: UserSessionsIndex
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+            - AttributeName: timestamp
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  # API Gateway for remote access
+  DataCollectionAPI:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub 'spokhand-data-collection-api-${Environment}'
+      Description: 'API for remote sign language data collection'
+
+  # Lambda function for video processing
+  VideoProcessingFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'spokhand-video-processor-${Environment}'
+      Runtime: python3.9
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import os
+          
+          def handler(event, context):
+              # Video processing logic
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps({'message': 'Video processed successfully'})
+              }
+      Environment:
+        Variables:
+          S3_BUCKET: !Ref VideoStorageBucket
+          DYNAMODB_TABLE: !Ref DataCollectionTable
+      Role: !GetAtt VideoProcessingRole.Arn
+
+  # IAM Role for Lambda
+  VideoProcessingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: VideoProcessingPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource: !Sub '${VideoStorageBucket}/*'
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                Resource: !GetAtt DataCollectionTable.Arn
+
+  # CloudFront for video streaming
+  VideoDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt VideoStorageBucket.RegionalDomainName
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${CloudFrontOAI}'
+        Enabled: true
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # CachingOptimized
+        PriceClass: PriceClass_100
+
+  # CloudFront Origin Access Identity
+  CloudFrontOAI:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: !Sub 'OAI for ${Environment} environment'
+
+Outputs:
+  VideoStorageBucketName:
+    Description: 'S3 bucket for video storage'
+    Value: !Ref VideoStorageBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-VideoStorageBucket'
+
+  DataCollectionTableName:
+    Description: 'DynamoDB table for data collection metadata'
+    Value: !Ref DataCollectionTable
+    Export:
+      Name: !Sub '${AWS::StackName}-DataCollectionTable'
+
+  APIEndpoint:
+    Description: 'API Gateway endpoint'
+    Value: !Sub 'https://${DataCollectionAPI}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+    Export:
+      Name: !Sub '${AWS::StackName}-APIEndpoint' 

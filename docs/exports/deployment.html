@@ -1,0 +1,111 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Deployment Architecture</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body { margin: 20px; font-family: Arial, sans-serif; }
+        .diagram-container { 
+            border: 1px solid #ddd; 
+            padding: 20px; 
+            border-radius: 8px; 
+            background: white;
+        }
+        h1 { color: #2c3e50; }
+    </style>
+</head>
+<body>
+    <h1>Deployment Architecture</h1>
+    <div class="diagram-container">
+        <div class="mermaid">
+
+graph TB
+    subgraph "Load Balancer"
+        LB[NGINX Load Balancer]
+    end
+    
+    subgraph "API Gateway"
+        AG[Kong API Gateway]
+    end
+    
+    subgraph "Microservices Cluster"
+        subgraph "Service 1"
+            CS1[Camera Service<br/>Instance 1]
+            CS2[Camera Service<br/>Instance 2]
+        end
+        
+        subgraph "Service 2"
+            AS1[Annotation Service<br/>Instance 1]
+            AS2[Annotation Service<br/>Instance 2]
+        end
+        
+        subgraph "Service 3"
+            US1[Upload Service<br/>Instance 1]
+            US2[Upload Service<br/>Instance 2]
+        end
+    end
+    
+    subgraph "Data Layer"
+        DB[(PostgreSQL<br/>Primary)]
+        DB2[(PostgreSQL<br/>Replica)]
+        S3[(S3 Storage)]
+        RED[(Redis Cluster)]
+    end
+    
+    subgraph "Monitoring"
+        MON[Prometheus]
+        LOG[ELK Stack]
+        TRACE[Jaeger]
+    end
+    
+    LB --> AG
+    AG --> CS1
+    AG --> CS2
+    AG --> AS1
+    AG --> AS2
+    AG --> US1
+    AG --> US2
+    
+    CS1 --> DB
+    CS2 --> DB
+    AS1 --> DB
+    AS2 --> DB
+    US1 --> DB
+    US2 --> DB
+    
+    CS1 --> S3
+    CS2 --> S3
+    AS1 --> S3
+    AS2 --> S3
+    US1 --> S3
+    US2 --> S3
+    
+    CS1 --> RED
+    CS2 --> RED
+    AS1 --> RED
+    AS2 --> RED
+    US1 --> RED
+    US2 --> RED
+    
+    CS1 --> MON
+    CS2 --> MON
+    AS1 --> MON
+    AS2 --> MON
+    US1 --> MON
+    US2 --> MON
+        
+        </div>
+    </div>
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: { useMaxWidth: true, htmlLabels: true },
+            sequence: { useMaxWidth: true },
+            class: { useMaxWidth: true }
+        });
+    </script>
+</body>
+</html>
+    

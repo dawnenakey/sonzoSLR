@@ -1,0 +1,79 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Service Interaction Flow</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body { margin: 20px; font-family: Arial, sans-serif; }
+        .diagram-container { 
+            border: 1px solid #ddd; 
+            padding: 20px; 
+            border-radius: 8px; 
+            background: white;
+        }
+        h1 { color: #2c3e50; }
+    </style>
+</head>
+<body>
+    <h1>Service Interaction Flow</h1>
+    <div class="diagram-container">
+        <div class="mermaid">
+
+sequenceDiagram
+    participant U as User
+    participant F as Frontend
+    participant G as API Gateway
+    participant C as Camera Service
+    participant A as Annotation Service
+    participant S as Storage Service
+    participant M as ML Service
+    participant AN as Analytics Service
+    
+    Note over U,AN: Data Collection Flow
+    U->>F: Start Camera Recording
+    F->>G: POST /api/camera/start
+    G->>C: Initialize Camera Session
+    C->>S: Store Session Metadata
+    C->>M: Start Hand Tracking
+    M->>F: Stream Hand Landmarks
+    F->>U: Display Real-time Feed
+    
+    U->>F: Stop Recording
+    F->>G: POST /api/camera/stop
+    G->>C: Stop Recording
+    C->>S: Save Video File
+    C->>AN: Log Recording Event
+    S->>F: Return Video URL
+    F->>U: Show Recording Complete
+    
+    Note over U,AN: Annotation Flow
+    U->>F: Upload Video for Annotation
+    F->>G: POST /api/upload/video
+    G->>S: Store Video File
+    S->>A: Queue for Annotation
+    A->>F: Return Annotation Interface
+    F->>U: Display Annotation Tool
+    
+    U->>F: Complete Annotation
+    F->>G: PUT /api/annotate/{id}
+    G->>A: Save Annotations
+    A->>S: Store Annotation Data
+    A->>AN: Log Annotation Event
+    S->>F: Return Success
+    F->>U: Show Annotation Complete
+        
+        </div>
+    </div>
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: { useMaxWidth: true, htmlLabels: true },
+            sequence: { useMaxWidth: true },
+            class: { useMaxWidth: true }
+        });
+    </script>
+</body>
+</html>
+    
