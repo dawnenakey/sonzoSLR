@@ -13,15 +13,8 @@ def lambda_handler(event, context):
     
     # Initialize DynamoDB client
     dynamodb = boto3.resource('dynamodb')
-    table = dynamodb.Table(os.environ.get('DYNAMODB_TABLE', 'spokhand-data-collection'))
-    
-    # CORS headers
-    headers = {
-        'Access-Control-Allow-Origin': '*',  # Update this to your frontend domain in production
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-        'Content-Type': 'application/json'
-    }
+    table_name = os.environ.get('DYNAMODB_TABLE', 'spokhand-data-collection')
+    table = dynamodb.Table(table_name)
     
     try:
         # Check if this is an API Gateway event
@@ -29,61 +22,104 @@ def lambda_handler(event, context):
             print(f"HTTP Method: {event['httpMethod']}")
             print(f"Resource: {event.get('resource', 'No resource')}")
             print(f"Path: {event.get('path', 'No path')}")
+            print(f"Path Parameters: {event.get('pathParameters', 'No path params')}")
             
-            if event['httpMethod'] == 'OPTIONS':
-                return {
-                    'statusCode': 200,
-                    'headers': headers,
-                    'body': ''
-                }
-            
-            if event['httpMethod'] == 'POST' and event.get('resource') == '/sessions':
+            # Handle POST /sessions
+            if event['httpMethod'] == 'POST' and event.get('path') == '/sessions':
+                print("Creating new session...")
+                
                 # Parse the request body
                 body = json.loads(event.get('body', '{}'))
-                print(f"Request body: {body}")
+                name = body.get('name', 'Unnamed Session')
+                description = body.get('description', '')
                 
                 # Generate session ID and timestamp
                 session_id = str(uuid.uuid4())
                 timestamp = datetime.utcnow().isoformat()
                 
-                # Create session item
+                # Create session item for DynamoDB
                 session_item = {
-                    'session_id': session_id,
-                    'name': body.get('name', 'Untitled Session'),
-                    'description': body.get('description', ''),
-                    'created_at': timestamp,
-                    'updated_at': timestamp,
-                    'status': 'active'
+                    'sessionId': session_id,
+                    'name': name,
+                    'description': description,
+                    'createdAt': timestamp,
+                    'status': 'active',
+                    'videoCount': 0
                 }
                 
-                # Save to DynamoDB
-                table.put_item(Item=session_item)
+                # Store in DynamoDB
+                try:
+                    table.put_item(Item=session_item)
+                    print(f"Session created successfully: {session_id}")
+                    
+                    return json.dumps({
+                        'success': True,
+                        'session': {
+                            'id': session_id,
+                            'name': name,
+                            'description': description,
+                            'createdAt': timestamp,
+                            'status': 'active'
+                        }
+                    })
+                except Exception as db_error:
+                    print(f"DynamoDB error: {db_error}")
+                    return json.dumps({
+                        'success': False,
+                        'error': f'Database error: {str(db_error)}'
+                    })
+            
+            # Handle GET /{sessionId}
+            elif event['httpMethod'] == 'GET' and event.get('pathParameters') and 'sessionId' in event['pathParameters']:
+                session_id = event['pathParameters']['sessionId']
+                print(f"Getting session: {session_id}")
                 
-                # Return success response with session details
+                try:
+                    response = table.get_item(Key={'sessionId': session_id})
+                    if 'Item' in response:
+                        session = response['Item']
+                        return json.dumps({
+                            'success': True,
+                            'session': session
+                        })
+                    else:
+                        return json.dumps({
+                            'success': False,
+                            'error': 'Session not found'
+                        })
+                except Exception as db_error:
+                    print(f"DynamoDB error: {db_error}")
+                    return json.dumps({
+                        'success': False,
+                        'error': f'Database error: {str(db_error)}'
+                    })
+            
+            # Handle OPTIONS requests for CORS
+            elif event['httpMethod'] == 'OPTIONS':
                 return json.dumps({
                     'success': True,
-                    'session': {
-                        'id': session_id,
-                        'name': session_item['name'],
-                        'description': session_item['description'],
-                        'createdAt': session_item['created_at'],
-                        'updatedAt': session_item['updated_at'],
-                        'status': session_item['status']
-                    }
+                    'message': 'CORS preflight handled'
                 })
-                
-        # Return error for unsupported methods
-        return json.dumps({
-            'success': False,
-            'error': 'Unsupported method or resource'
-        })
-                
+            
+            else:
+                print(f"Unsupported method/resource: {event['httpMethod']} {event.get('path')}")
+                return json.dumps({
+                    'success': False,
+                    'error': f'Unsupported method or resource: {event["httpMethod"]} {event.get("path")}'
+                })
+        
+        else:
+            print("Not an API Gateway event")
+            return json.dumps({
+                'success': False,
+                'error': 'Not an API Gateway event'
+            })
+    
     except Exception as e:
-        # Return error response
-        print(f"Error: {str(e)}")
+        print(f"General error: {e}")
         return json.dumps({
             'success': False,
-            'error': str(e)
+            'error': f'Internal server error: {str(e)}'
         })
 
     # Handle S3 events (for video processing)
