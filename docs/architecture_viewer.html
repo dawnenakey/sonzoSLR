@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpokHand SLR Architecture - UML Diagrams</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #34495e;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            margin-top: 40px;
+        }
+        .diagram-container {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        .diagram-title {
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        .mermaid {
+            text-align: center;
+        }
+        .nav {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .nav a {
+            display: block;
+            color: #3498db;
+            text-decoration: none;
+            margin: 5px 0;
+        }
+        .nav a:hover {
+            color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <strong>Navigation:</strong>
+        <a href="#overview">System Overview</a>
+        <a href="#sequence">Sequence Diagram</a>
+        <a href="#camera">Camera Service</a>
+        <a href="#annotation">Annotation Service</a>
+        <a href="#storage">Storage Service</a>
+        <a href="#data">Data Models</a>
+        <a href="#deployment">Deployment</a>
+        <a href="#security">Security</a>
+    </div>
+
+    <div class="container">
+        <h1>SpokHand SLR Microservices Architecture</h1>
+
+        <section id="overview">
+            <h2>1. System Overview (High-Level Architecture)</h2>
+            <div class="diagram-container">
+                <div class="diagram-title">Complete System Architecture</div>
+                <div class="mermaid">
+                    graph TB
+                        subgraph "Client Layer"
+                            UI[React Frontend<br/>Unified UI]
+                        end
+                        
+                        subgraph "API Gateway Layer"
+                            GW[API Gateway<br/>Load Balancer]
+                        end
+                        
+                        subgraph "Microservices Layer"
+                            subgraph "Core Services"
+                                CS[Camera Service<br/>Real-time Processing]
+                                AS[Annotation Service<br/>Sign-Cut Platform]
+                                US[Upload Service<br/>Data Management]
+                            end
+                            
+                            subgraph "Support Services"
+                                SS[Storage Service<br/>File & Data Storage]
+                                MS[ML Service<br/>Sign Recognition]
+                                AN[Analytics Service<br/>Data Analysis]
+                            end
+                        end
+                        
+                        subgraph "Infrastructure Layer"
+                            DB[(PostgreSQL<br/>Metadata)]
+                            S3[(S3 Storage<br/>Videos & Files)]
+                            RED[(Redis<br/>Cache & Sessions)]
+                            MQ[(Message Queue<br/>Async Processing)]
+                        end
+                        
+                        UI --> GW
+                        GW --> CS
+                        GW --> AS
+                        GW --> US
+                        GW --> SS
+                        GW --> MS
+                        GW --> AN
+                        
+                        CS --> SS
+                        CS --> MS
+                        AS --> SS
+                        US --> SS
+                        AN --> SS
+                        
+                        CS --> MQ
+                        AS --> MQ
+                        US --> MQ
+                        
+                        SS --> DB
+                        SS --> S3
+                        CS --> RED
+                        AS --> RED
+                </div>
+            </div>
+        </section>
+
+        <section id="sequence">
+            <h2>2. Service Interaction Sequence Diagram</h2>
+            <div class="diagram-container">
+                <div class="diagram-title">Data Collection and Annotation Flow</div>
+                <div class="mermaid">
+                    sequenceDiagram
+                        participant U as User
+                        participant F as Frontend
+                        participant G as API Gateway
+                        participant C as Camera Service
+                        participant A as Annotation Service
+                        participant S as Storage Service
+                        participant M as ML Service
+                        participant AN as Analytics Service
+                        
+                        Note over U,AN: Data Collection Flow
+                        U->>F: Start Camera Recording
+                        F->>G: POST /api/camera/start
+                        G->>C: Initialize Camera Session
+                        C->>S: Store Session Metadata
+                        C->>M: Start Hand Tracking
+                        M->>F: Stream Hand Landmarks
+                        F->>U: Display Real-time Feed
+                        
+                        U->>F: Stop Recording
+                        F->>G: POST /api/camera/stop
+                        G->>C: Stop Recording
+                        C->>S: Save Video File
+                        C->>AN: Log Recording Event
+                        S->>F: Return Video URL
+                        F->>U: Show Recording Complete
+                        
+                        Note over U,AN: Annotation Flow
+                        U->>F: Upload Video for Annotation
+                        F->>G: POST /api/upload/video
+                        G->>S: Store Video File
+                        S->>A: Queue for Annotation
+                        A->>F: Return Annotation Interface
+                        F->>U: Display Annotation Tool
+                        
+                        U->>F: Complete Annotation
+                        F->>G: PUT /api/annotate/{id}
+                        G->>A: Save Annotations
+                        A->>S: Store Annotation Data
+                        A->>AN: Log Annotation Event
+                        S->>F: Return Success
+                        F->>U: Show Annotation Complete
+                </div>
+            </div>
+        </section>
+
+        <section id="camera">
+            <h2>3.1 Camera Service Class Diagram</h2>
+            <div class="diagram-container">
+                <div class="diagram-title">Camera Service Internal Structure</div>
+                <div class="mermaid">
+                    classDiagram
+                        class CameraService {
+                            +startSession(cameraType, settings)
+                            +stopSession(sessionId)
+                            +getStream(sessionId)
+                            +recordSign(sessionId, signName)
+                        }
+                        
+                        class CameraSession {
+                            -sessionId: UUID
+                            -cameraType: string
+                            -settings: object
+                            -status: string
+                            +initialize()
+                            +startRecording()
+                            +stopRecording()
+                            +getStatus()
+                        }
+                        
+                        class HandTracker {
+                            -model: MediaPipe
+                            +trackHands(frame)
+                            +getLandmarks()
+                            +calculateConfidence()
+                        }
+                        
+                        class VideoRecorder {
+                            -outputPath: string
+                            -codec: string
+                            +startRecording()
+                            +stopRecording()
+                            +saveVideo()
+                        }
+                        
+                        CameraService --> CameraSession
+                        CameraSession --> HandTracker
+                        CameraSession --> VideoRecorder
+                </div>
+            </div>
+        </section>
+
+        <section id="annotation">
+            <h2>3.2 Annotation Service Class Diagram</h2>
+            <div class="diagram-container">
+                <div class="diagram-title">Annotation Service Internal Structure</div>
+                <div class="mermaid">
+                    classDiagram
+                        class AnnotationService {
+                            +processVideo(videoId)
+                            +getAnnotations(annotationId)
+                            +updateAnnotations(annotationId, segments)
+                            +exportAnnotations(annotationId, format)
+                        }
+                        
+                        class VideoProcessor {
+                            -videoPath: string
+                            -metadata: object
+                            +extractFrames()
+                            +generateThumbnails()
+                            +validateFormat()
+                        }
+                        
+                        class AnnotationSegment {
+                            -segmentId: UUID
+                            -startTime: timestamp
+                            -endTime: timestamp
+                            -segmentType: string
+                            -description: string
+                            +validate()
+                            +toJSON()
+                        }
+                        
+                        class AnnotationSession {
+                            -sessionId: UUID
+                            -videoId: UUID
+                            -segments: AnnotationSegment[]
+                            -status: string
+                            +addSegment(segment)
+                            +removeSegment(segmentId)
+                            +exportData(format)
+                        }
+                        
+                        AnnotationService --> VideoProcessor
+                        AnnotationService --> AnnotationSession
+                        AnnotationSession --> AnnotationSegment
+                </div>
+            </div>
+        </section>
+
+        <section id="storage">
+            <h2>3.3 Storage Service Class Diagram</h2>
+            <div class="diagram-container">
+                <div class="diagram-title">Storage Service Internal Structure</div>
+                <div class="mermaid">
+                    classDiagram
+                        class StorageService {
+                            +storeVideo(file, metadata)
+                            +storeAnnotation(data, videoId)
+                            +getVideo(videoId)
+                            +getAnnotation(annotationId)
+                            +deleteVideo(videoId)
+                        }
+                        
+                        class VideoStorage {
+                            -bucketName: string
+                            -region: string
+                            +uploadVideo(file, path)
+                            +downloadVideo(path)
+                            +deleteVideo(path)
+                            +getVideoUrl(path)
+                        }
+                        
+                        class DatabaseManager {
+                            -connection: Connection
+                            +insertVideo(metadata)
+                            +insertAnnotation(data)
+                            +queryVideos(filters)
+                            +queryAnnotations(videoId)
+                        }
+                        
+                        class CacheManager {
+                            -redisClient: Redis
+                            +setCache(key, value, ttl)
+                            +getCache(key)
+                            +deleteCache(key)
+                            +clearCache()
+                        }
+                        
+                        StorageService --> VideoStorage
+                        StorageService --> DatabaseManager
+                        StorageService --> CacheManager
+                </div>
+            </div>
+        </section>
+
+        <section id="data">
+            <h2>4. Data Models</h2>
+            <div class="diagram-container">
+                <div class="diagram-title">Database Entity Relationships</div>
+                <div class="mermaid">
+                    erDiagram
+                        VIDEO {
+                            uuid id PK
+                            string filename
+                            string original_name
+                            string file_path
+                            string file_type
+                            int file_size
+                            timestamp created_at
+                            timestamp updated_at
+                            string status
+                            json metadata
+                        }
+                        
+                        ANNOTATION {
+                            uuid id PK
+                            uuid video_id FK
+                            string annotation_type
+                            json segments
+                            timestamp created_at
+                            timestamp updated_at
+                            string status
+                        }
+                        
+                        SESSION {
+                            uuid id PK
+                            string session_type
+                            timestamp start_time
+                            timestamp end_time
+                            string status
+                            json settings
+                        }
+                        
+                        VIDEO ||--o{ ANNOTATION : "has"
+                        SESSION ||--o{ VIDEO : "creates"
+                </div>
+            </div>
+        </section>
+
+        <section id="deployment">
+            <h2>5. Deployment Architecture</h2>
+            <div class="diagram-container">
+                <div class="diagram-title">Infrastructure and Scaling Setup</div>
+                <div class="mermaid">
+                    graph TB
+                        subgraph "Load Balancer"
+                            LB[NGINX Load Balancer]
+                        end
+                        
+                        subgraph "API Gateway"
+                            AG[Kong API Gateway]
+                        end
+                        
+                        subgraph "Microservices Cluster"
+                            subgraph "Service 1"
+                                CS1[Camera Service<br/>Instance 1]
+                                CS2[Camera Service<br/>Instance 2]
+                            end
+                            
+                            subgraph "Service 2"
+                                AS1[Annotation Service<br/>Instance 1]
+                                AS2[Annotation Service<br/>Instance 2]
+                            end
+                            
+                            subgraph "Service 3"
+                                US1[Upload Service<br/>Instance 1]
+                                US2[Upload Service<br/>Instance 2]
+                            end
+                        end
+                        
+                        subgraph "Data Layer"
+                            DB[(PostgreSQL<br/>Primary)]
+                            DB2[(PostgreSQL<br/>Replica)]
+                            S3[(S3 Storage)]
+                            RED[(Redis Cluster)]
+                        end
+                        
+                        subgraph "Monitoring"
+                            MON[Prometheus]
+                            LOG[ELK Stack]
+                            TRACE[Jaeger]
+                        end
+                        
+                        LB --> AG
+                        AG --> CS1
+                        AG --> CS2
+                        AG --> AS1
+                        AG --> AS2
+                        AG --> US1
+                        AG --> US2
+                        
+                        CS1 --> DB
+                        CS2 --> DB
+                        AS1 --> DB
+                        AS2 --> DB
+                        US1 --> DB
+                        US2 --> DB
+                        
+                        CS1 --> S3
+                        CS2 --> S3
+                        AS1 --> S3
+                        AS2 --> S3
+                        US1 --> S3
+                        US2 --> S3
+                        
+                        CS1 --> RED
+                        CS2 --> RED
+                        AS1 --> RED
+                        AS2 --> RED
+                        US1 --> RED
+                        US2 --> RED
+                        
+                        CS1 --> MON
+                        CS2 --> MON
+                        AS1 --> MON
+                        AS2 --> MON
+                        US1 --> MON
+                        US2 --> MON
+                </div>
+            </div>
+        </section>
+
+        <section id="security">
+            <h2>6. Security Architecture</h2>
+            <div class="diagram-container">
+                <div class="diagram-title">Authentication and Authorization Flow</div>
+                <div class="mermaid">
+                    graph TB
+                        subgraph "Security Layer"
+                            AUTH[Authentication Service]
+                            AUTHZ[Authorization Service]
+                            ENC[Encryption Service]
+                        end
+                        
+                        subgraph "API Gateway"
+                            AG[Kong Gateway]
+                        end
+                        
+                        subgraph "Services"
+                            S1[Camera Service]
+                            S2[Annotation Service]
+                            S3[Upload Service]
+                        end
+                        
+                        AG --> AUTH
+                        AG --> AUTHZ
+                        AUTH --> S1
+                        AUTH --> S2
+                        AUTH --> S3
+                        AUTHZ --> S1
+                        AUTHZ --> S2
+                        AUTHZ --> S3
+                        ENC --> S1
+                        ENC --> S2
+                        ENC --> S3
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true
+            }
+        });
+    </script>
+</body>
+</html> 

@@ -3,6 +3,9 @@ streamlit==1.32.0
 opencv-python-headless==4.9.0.80  # Using headless version for cloud deployment
 numpy>=1.24.0,<2.0.0
 pandas==2.2.1
+mediapipe==0.10.9  # For hand tracking
+python-dotenv==1.0.1  # For loading environment variables
+depthai==2.24.0.0  # For OAK camera support
 
 # Testing dependencies
 pytest==8.0.2
