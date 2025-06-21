@@ -1,166 +1,124 @@
 import json
-import boto3
 import os
+import boto3
+import logging
+import decimal
 import uuid
 from datetime import datetime
 
+# --- Configuration ---
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+VERSION = "v1.7" # Deployment version tracker
+
+# --- AWS Clients ---
+DYNAMODB_TABLE_NAME = os.environ.get('DYNAMODB_TABLE', 'spokhand-data-collection')
+dynamodb = boto3.resource('dynamodb')
+table = dynamodb.Table(DYNAMODB_TABLE_NAME)
+
+# --- Helper Classes ---
+class DecimalEncoder(json.JSONEncoder):
+    """Helper class to convert a DynamoDB item to JSON."""
+    def default(self, o):
+        if isinstance(o, decimal.Decimal):
+            if o % 1 > 0:
+                return float(o)
+            else:
+                return int(o)
+        return super(DecimalEncoder, self).default(o)
+
+# --- Main Handler ---
 def lambda_handler(event, context):
     """
-    AWS Lambda function to handle session management and video processing
+    Main Lambda handler for API Gateway requests.
+    Routes requests to the appropriate handler based on HTTP method and path.
     """
-    # Debug logging to see the event structure
-    print(f"Event received: {json.dumps(event, indent=2)}")
-    
-    # Initialize DynamoDB client
-    dynamodb = boto3.resource('dynamodb')
-    table_name = os.environ.get('DYNAMODB_TABLE', 'spokhand-data-collection')
-    table = dynamodb.Table(table_name)
-    
-    try:
-        # Check if this is an API Gateway event
-        if 'httpMethod' in event:
-            print(f"HTTP Method: {event['httpMethod']}")
-            print(f"Resource: {event.get('resource', 'No resource')}")
-            print(f"Path: {event.get('path', 'No path')}")
-            print(f"Path Parameters: {event.get('pathParameters', 'No path params')}")
-            
-            # Handle POST /sessions
-            if event['httpMethod'] == 'POST' and event.get('path') == '/sessions':
-                print("Creating new session...")
-                
-                # Parse the request body
-                body = json.loads(event.get('body', '{}'))
-                name = body.get('name', 'Unnamed Session')
-                description = body.get('description', '')
-                
-                # Generate session ID and timestamp
-                session_id = str(uuid.uuid4())
-                timestamp = datetime.utcnow().isoformat()
-                
-                # Create session item for DynamoDB
-                session_item = {
-                    'sessionId': session_id,
-                    'name': name,
-                    'description': description,
-                    'createdAt': timestamp,
-                    'status': 'active',
-                    'videoCount': 0
-                }
-                
-                # Store in DynamoDB
-                try:
-                    table.put_item(Item=session_item)
-                    print(f"Session created successfully: {session_id}")
-                    
-                    return json.dumps({
-                        'success': True,
-                        'session': {
-                            'id': session_id,
-                            'name': name,
-                            'description': description,
-                            'createdAt': timestamp,
-                            'status': 'active'
-                        }
-                    })
-                except Exception as db_error:
-                    print(f"DynamoDB error: {db_error}")
-                    return json.dumps({
-                        'success': False,
-                        'error': f'Database error: {str(db_error)}'
-                    })
-            
-            # Handle GET /{sessionId}
-            elif event['httpMethod'] == 'GET' and event.get('pathParameters') and 'sessionId' in event['pathParameters']:
-                session_id = event['pathParameters']['sessionId']
-                print(f"Getting session: {session_id}")
-                
-                try:
-                    response = table.get_item(Key={'sessionId': session_id})
-                    if 'Item' in response:
-                        session = response['Item']
-                        return json.dumps({
-                            'success': True,
-                            'session': session
-                        })
-                    else:
-                        return json.dumps({
-                            'success': False,
-                            'error': 'Session not found'
-                        })
-                except Exception as db_error:
-                    print(f"DynamoDB error: {db_error}")
-                    return json.dumps({
-                        'success': False,
-                        'error': f'Database error: {str(db_error)}'
-                    })
-            
-            # Handle OPTIONS requests for CORS
-            elif event['httpMethod'] == 'OPTIONS':
-                return json.dumps({
-                    'success': True,
-                    'message': 'CORS preflight handled'
-                })
-            
-            else:
-                print(f"Unsupported method/resource: {event['httpMethod']} {event.get('path')}")
-                return json.dumps({
-                    'success': False,
-                    'error': f'Unsupported method or resource: {event["httpMethod"]} {event.get("path")}'
-                })
-        
-        else:
-            print("Not an API Gateway event")
-            return json.dumps({
-                'success': False,
-                'error': 'Not an API Gateway event'
-            })
-    
-    except Exception as e:
-        print(f"General error: {e}")
-        return json.dumps({
-            'success': False,
-            'error': f'Internal server error: {str(e)}'
-        })
+    logger.info(f"--- Spokhand Lambda v{VERSION} ---")
+    logger.info(f"Received event: {json.dumps(event)}")
 
-    # Handle S3 events (for video processing)
-    if 'Records' in event:
-        # Initialize S3 client
-        s3 = boto3.client('s3')
-        bucket_name = os.environ['S3_BUCKET_NAME']
+    # Standard CORS headers
+    cors_headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+        'Access-Control-Allow-Methods': 'OPTIONS,POST,GET'
+    }
+
+    # Router
+    try:
+        http_method = event.get('httpMethod')
+        # The actual path is available in requestContext
+        path = event.get('requestContext', {}).get('resourcePath', event.get('path'))
+
+        if http_method == 'OPTIONS':
+            return create_response(200, 'CORS preflight OK', cors_headers)
         
-        # Get the uploaded file details from the event
-        records = event.get('Records', [])
-        for record in records:
-            # Get the S3 object details
-            s3_event = record.get('s3', {})
-            bucket = s3_event.get('bucket', {}).get('name')
-            key = s3_event.get('object', {}).get('key')
+        elif http_method == 'POST' and path == '/sessions':
+            return handle_create_session(event, cors_headers)
+
+        elif http_method == 'GET' and path == '/sessions':
+            return handle_get_sessions(event, cors_headers)
             
-            if bucket == bucket_name:
-                # Process the uploaded file
-                response = s3.get_object(Bucket=bucket, Key=key)
-                file_content = response['Body'].read()
-                
-                # TODO: Add your sign language processing logic here
-                # For now, we'll just log the event
-                print(f"Processing file: {key}")
-                
-                # Create a metadata file
-                metadata = {
-                    'filename': key,
-                    'processed_at': datetime.now().isoformat(),
-                    'status': 'processed'
-                }
-                
-                # Save metadata back to S3
-                metadata_key = f"metadata/{key}.json"
-                s3.put_object(
-                    Bucket=bucket_name,
-                    Key=metadata_key,
-                    Body=json.dumps(metadata)
-                )
-                
-        return {
-            'statusCode': 200,
-            'body': json.dumps('Processing completed successfully')
-        } 
+        else:
+            logger.warning(f"No route matched for method '{http_method}' and path '{path}'")
+            return create_response(404, {'success': False, 'error': 'Not Found'}, cors_headers)
+
+    except Exception as e:
+        logger.error(f"!!! Unhandled exception: {str(e)}")
+        return create_response(500, {'success': False, 'error': 'Internal Server Error'}, cors_headers)
+
+
+# --- Route Handlers ---
+def handle_create_session(event, headers):
+    """Handles POST /sessions - Creates a new session."""
+    try:
+        body = json.loads(event.get('body', '{}'))
+        session_id = str(uuid.uuid4())
+        timestamp = datetime.utcnow().isoformat()
+        
+        item = {
+            'timestamp': timestamp,  # DynamoDB primary key
+            'session_id': session_id,
+            'name': body.get('name', 'Unnamed Session'),
+            'description': body.get('description', ''),
+            'createdAt': timestamp
+        }
+        
+        table.put_item(Item=item)
+        logger.info(f"Successfully created session {session_id}")
+        return create_response(201, {'success': True, 'session_id': session_id}, headers)
+
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON in request body: {str(e)}")
+        return create_response(400, {'success': False, 'error': 'Invalid JSON format'}, headers)
+    except Exception as e:
+        logger.error(f"Error creating session in DynamoDB: {str(e)}")
+        return create_response(500, {'success': False, 'error': 'Could not create session'}, headers)
+
+
+def handle_get_sessions(event, headers):
+    """Handles GET /sessions - Retrieves all sessions."""
+    try:
+        response = table.scan()
+        items = response.get('Items', [])
+        logger.info(f"Found {len(items)} sessions.")
+        return create_response(200, {'success': True, 'sessions': items}, headers)
+
+    except Exception as e:
+        logger.error(f"Error scanning sessions from DynamoDB: {str(e)}")
+        return create_response(500, {'success': False, 'error': 'Could not retrieve sessions'}, headers)
+
+
+# --- Utility Functions ---
+def create_response(status_code, body, headers={}):
+    """Creates a valid API Gateway proxy response."""
+    # Ensure body is a JSON string
+    if not isinstance(body, str):
+        body = json.dumps(body, cls=DecimalEncoder)
+        
+    response = {
+        'statusCode': status_code,
+        'headers': headers,
+        'body': body
+    }
+    logger.info(f"Returning response: {json.dumps(response, cls=DecimalEncoder)}")
+    return response 

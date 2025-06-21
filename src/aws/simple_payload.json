@@ -1,0 +1,1 @@
+{"httpMethod":"POST","resource":"/sessions","body":"{\"name\":\"Test\",\"description\":\"Test\"}"}

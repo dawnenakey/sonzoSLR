@@ -1,0 +1,5 @@
+{
+  "httpMethod": "POST",
+  "path": "/sessions",
+  "body": "{\"name\":\"Debug Test\",\"description\":\"Debug test\"}"
+} 

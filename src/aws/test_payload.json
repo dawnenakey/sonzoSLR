@@ -1,0 +1,5 @@
+{
+  "httpMethod": "POST",
+  "resource": "/sessions",
+  "body": "{\"name\": \"Test Session\", \"description\": \"Testing Lambda directly\"}"
+} 
