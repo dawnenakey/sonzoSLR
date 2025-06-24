@@ -3,6 +3,7 @@ frontend:
   phases:
     preBuild:
       commands:
+        - ls -la  # Debug: Confirm directory structure
         - cd frontend
         - npm install
     build:
@@ -15,4 +16,4 @@ frontend:
       - '**/*'
   cache:
     paths:
-      - frontend/node_modules/**/* 
+      - frontend/node_modules/**/*
