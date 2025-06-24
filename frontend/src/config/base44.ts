@@ -6,13 +6,13 @@ export const BASE44_CONFIG = {
   appId: "6827319154cb6b61482ac7a4",
   
   // Add your API key here (get this from Base44 team)
-  apiKey: process.env.REACT_APP_BASE44_API_KEY || "your-api-key-here",
+  apiKey: process.env.VITE_BASE44_API_KEY || "your-api-key-here",
   
   // Add your auth token here (if you have one)
-  authToken: process.env.REACT_APP_BASE44_AUTH_TOKEN || "",
+  authToken: process.env.VITE_BASE44_AUTH_TOKEN || "",
   
   // Base URL for Base44 API (get this from Base44 team)
-  baseUrl: process.env.REACT_APP_BASE44_BASE_URL || "https://api.base44.com",
+  baseUrl: process.env.VITE_BASE44_BASE_URL || "https://api.base44.com",
   
   // Whether authentication is required
   requiresAuth: true,
@@ -29,9 +29,9 @@ export const BASE44_CONFIG = {
 //    - SDK package access
 //
 // 2. Set environment variables in your .env file:
-//    REACT_APP_BASE44_API_KEY=your_actual_api_key
-//    REACT_APP_BASE44_AUTH_TOKEN=your_actual_auth_token
-//    REACT_APP_BASE44_BASE_URL=https://api.base44.com
+//    VITE_BASE44_API_KEY=your_actual_api_key
+//    VITE_BASE44_AUTH_TOKEN=your_actual_auth_token
+//    VITE_BASE44_BASE_URL=https://api.base44.com
 //
 // 3. Replace the mock implementation in base44Client.ts with the real SDK
 //

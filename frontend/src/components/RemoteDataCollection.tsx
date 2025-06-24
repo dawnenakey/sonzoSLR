@@ -39,7 +39,7 @@ const RemoteDataCollection: React.FC = () => {
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
 
-  const API_BASE_URL = process.env.REACT_APP_DATA_COLLECTION_API || 'http://localhost:8002';
+  const API_BASE_URL = process.env.VITE_DATA_COLLECTION_API || 'http://localhost:8002';
 
   useEffect(() => {
     // Load user sessions on component mount

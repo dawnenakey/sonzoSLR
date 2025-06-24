@@ -5,12 +5,22 @@ frontend:
       commands:
         - nvm install 20
         - nvm use 20
+        - echo "Current directory: $(pwd)"
         - ls -la
-        - cd frontend
-        - npm install
+        - cd frontend || { echo "frontend directory not found"; exit 1; }
+        - echo "Frontend directory contents:"
+        - ls -la
+        - npm install --production=false
     build:
       commands:
+        - echo "Building frontend..."
+        - echo "Environment variables:"
+        - echo "NODE_ENV: $NODE_ENV"
+        - echo "VITE_BASE44_API_KEY: ${VITE_BASE44_API_KEY:+SET}"
+        - echo "VITE_DATA_COLLECTION_API: ${VITE_DATA_COLLECTION_API:+SET}"
         - npm run build
+        - echo "Build completed. Contents of dist:"
+        - ls -la dist/
   artifacts:
     baseDirectory: frontend/dist
     files:
@@ -18,3 +28,4 @@ frontend:
   cache:
     paths:
       - frontend/node_modules/**/*
+      - frontend/.npm-cache/**/*

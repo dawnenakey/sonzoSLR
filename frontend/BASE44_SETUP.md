@@ -17,10 +17,10 @@ Create a `.env` file in the `frontend` directory with your credentials:
 
 ```bash
 # Base44 API Configuration
-REACT_APP_BASE44_API_KEY=your_actual_api_key_here
-REACT_APP_BASE44_AUTH_TOKEN=your_actual_auth_token_here
-REACT_APP_BASE44_BASE_URL=https://api.base44.com
-REACT_APP_BASE44_APP_ID=6827319154cb6b61482ac7a4
+VITE_BASE44_API_KEY=your_actual_api_key_here
+VITE_BASE44_AUTH_TOKEN=your_actual_auth_token_here
+VITE_BASE44_BASE_URL=https://api.base44.com
+VITE_BASE44_APP_ID=6827319154cb6b61482ac7a4
 ```
 
 ## Step 3: Install Base44 SDK
