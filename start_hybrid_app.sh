@@ -2,40 +2,33 @@
 
 echo "🚀 Starting SpokHand SLR Hybrid Application..."
 
-# Function to cleanup on exit
+# Function to kill processes on specified ports
 cleanup() {
-    echo "🛑 Stopping services..."
-    kill $REACT_PID $CAMERA_PID 2>/dev/null
-    exit 0
+    echo "Shutting down services..."
+    kill $(lsof -t -i:5173) 2>/dev/null
+    echo "Cleanup complete."
 }
 
-# Set up signal handlers
-trap cleanup SIGINT SIGTERM
+# Trap exit signals to run cleanup
+trap cleanup EXIT
 
-# Start Camera Service (Python Backend)
-echo "📹 Starting Camera Service..."
-cd microservices/camera-service
-source venv/bin/activate
-python main.py &
-CAMERA_PID=$!
-cd ../..
+# Source NVM to make it available to the script
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
-# Wait a moment for camera service to start
-sleep 3
+# Start React frontend
+echo "Starting React frontend..."
+(cd frontend && nvm use stable && yarn start --host) &
+FRONTEND_PID=$!
 
-# Start React Frontend
-echo "⚛️  Starting React Frontend..."
-cd frontend
-npm start &
-REACT_PID=$!
-cd ..
+# Wait for all background processes to complete
+wait $FRONTEND_PID
 
 echo "✅ Services started!"
-echo "📹 Camera Service: http://localhost:8001"
-echo "⚛️  React Frontend: http://localhost:3000"
-echo "📖 API Documentation: http://localhost:8001/docs"
+echo "⚛️  React Frontend: http://localhost:5173"
+echo "📖 API Documentation: http://localhost:8000/docs and http://localhost:8001/docs"
 echo ""
 echo "Press Ctrl+C to stop all services"
 
-# Wait for both processes
-wait 
+# Wait for all background processes to complete
+wait $FRONTEND_PID 

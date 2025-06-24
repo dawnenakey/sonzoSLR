@@ -6,32 +6,6 @@
 //   requiresAuth: true
 // });
 
-// Temporary mock implementation
-export const base44 = {
-  auth: {
-    getStatus: () => ({ isAuthenticated: false })
-  },
-  initialize: async () => {
-    console.log('Base44 SDK not configured - using mock implementation');
-    return true;
-  }
-};
-
-// Export any additional Base44 utility functions here
-export const getAuthStatus = () => {
-  return base44.auth.getStatus();
-};
-
-export const initializeBase44 = async () => {
-  try {
-    await base44.initialize();
-    return true;
-  } catch (error) {
-    console.error('Failed to initialize Base44:', error);
-    return false;
-  }
-};
-
 export interface Base44Config {
   appId: string;
   apiKey?: string;
@@ -88,7 +62,7 @@ class MockBase44Client {
 
     signIn: async (email: string, password: string) => {
       // Mock authentication - replace with actual Base44 auth
-      console.log('Mock authentication for:', email);
+      console.log('Mock authentication for:', email, password);
       this.authToken = 'mock-auth-token';
       this.user = {
         id: 'user-123',
@@ -135,7 +109,7 @@ class MockBase44Client {
         return { success: true };
       },
 
-      list: async (filters?: any) => {
+      list: async (filters: any) => {
         console.log('Listing annotations with filters:', filters);
         return [] as Annotation[];
       }
@@ -167,7 +141,7 @@ class MockBase44Client {
         return { success: true };
       },
 
-      list: async (filters?: any) => {
+      list: async (filters: any) => {
         console.log('Listing videos with filters:', filters);
         return [] as Video[];
       },
@@ -182,8 +156,8 @@ class MockBase44Client {
   // Integrations
   integrations = {
     Core: {
-      UploadFile: async (file: File, options?: any) => {
-        console.log('Uploading file:', file.name);
+      UploadFile: async (file: File, options: any) => {
+        console.log('Uploading file:', file.name, options);
         // Mock file upload - replace with actual Base44 upload
         return {
           url: URL.createObjectURL(file),
@@ -193,8 +167,8 @@ class MockBase44Client {
         };
       },
 
-      InvokeLLM: async (prompt: string, options?: any) => {
-        console.log('Invoking LLM with prompt:', prompt);
+      InvokeLLM: async (prompt: string, options: any) => {
+        console.log('Invoking LLM with prompt:', prompt, options);
         // Mock LLM response - replace with actual Base44 LLM
         return {
           response: `Mock response to: ${prompt}`,
@@ -203,20 +177,20 @@ class MockBase44Client {
       },
 
       SendEmail: async (to: string, subject: string, body: string) => {
-        console.log('Sending email to:', to);
+        console.log('Sending email to:', to, subject, body);
         return { success: true, messageId: `email-${Date.now()}` };
       },
 
-      GenerateImage: async (prompt: string, options?: any) => {
-        console.log('Generating image with prompt:', prompt);
+      GenerateImage: async (prompt: string, options: any) => {
+        console.log('Generating image with prompt:', prompt, options);
         return {
           url: 'https://via.placeholder.com/512x512?text=Mock+Image',
           id: `image-${Date.now()}`
         };
       },
 
-      ExtractDataFromUploadedFile: async (fileId: string, options?: any) => {
-        console.log('Extracting data from file:', fileId);
+      ExtractDataFromUploadedFile: async (fileId: string, options: any) => {
+        console.log('Extracting data from file:', fileId, options);
         return {
           extractedData: {},
           confidence: 0.95
@@ -226,7 +200,7 @@ class MockBase44Client {
   };
 
   // Initialize the client
-  initialize: async () => {
+  initialize = async () => {
     console.log('Initializing Base44 client with appId:', this.config.appId);
     
     // Check if we have stored auth token
@@ -240,7 +214,7 @@ class MockBase44Client {
   };
 
   // Get configuration
-  getConfig: () => this.config;
+  getConfig = () => this.config;
 }
 
 // Create the Base44 client instance
@@ -249,7 +223,7 @@ export const base44 = new MockBase44Client({
   requiresAuth: true
 });
 
-// Export convenience functions
+// Utility functions using the client
 export const getAuthStatus = () => base44.auth.getStatus();
 
 export const initializeBase44 = async () => {
@@ -265,36 +239,25 @@ export const initializeBase44 = async () => {
 export const signIn = async (email: string, password: string) => {
   try {
     const result = await base44.auth.signIn(email, password);
-    if (result.success && result.user) {
+    if (result.success) {
       localStorage.setItem('base44_auth_token', 'mock-auth-token');
     }
     return result;
   } catch (error) {
-    console.error('Sign in failed:', error);
-    return { success: false, error };
+    console.error('Sign-in failed:', error);
+    return { success: false };
   }
 };
 
 export const signOut = async () => {
   try {
-    const result = await base44.auth.signOut();
+    await base44.auth.signOut();
     localStorage.removeItem('base44_auth_token');
-    return result;
+    return { success: true };
   } catch (error) {
-    console.error('Sign out failed:', error);
-    return { success: false, error };
+    console.error('Sign-out failed:', error);
+    return { success: false };
   }
 };
 
-// Export entity types for convenience
-export const Annotation = base44.entities.Annotation;
-export const Video = base44.entities.Video;
-export const User = base44.auth;
-
-// Export integration types
-export const Core = base44.integrations.Core;
-export const InvokeLLM = base44.integrations.Core.InvokeLLM;
-export const SendEmail = base44.integrations.Core.SendEmail;
-export const UploadFile = base44.integrations.Core.UploadFile;
-export const GenerateImage = base44.integrations.Core.GenerateImage;
-export const ExtractDataFromUploadedFile = base44.integrations.Core.ExtractDataFromUploadedFile; 
+export const getCurrentUser = () => base44.auth.getCurrentUser();

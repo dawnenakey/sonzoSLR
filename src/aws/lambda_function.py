@@ -15,6 +15,8 @@ VERSION = "v1.7" # Deployment version tracker
 DYNAMODB_TABLE_NAME = os.environ.get('DYNAMODB_TABLE', 'spokhand-data-collection')
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(DYNAMODB_TABLE_NAME)
+S3_BUCKET_NAME = os.environ.get('S3_BUCKET', 'spokhand-data')
+s3_client = boto3.client('s3')
 
 # --- Helper Classes ---
 class DecimalEncoder(json.JSONEncoder):
@@ -55,6 +57,9 @@ def lambda_handler(event, context):
         elif http_method == 'POST' and path == '/sessions':
             return handle_create_session(event, cors_headers)
 
+        elif http_method == 'POST' and path == '/sessions/{sessionId}/upload-video':
+            return handle_generate_upload_url(event, cors_headers)
+
         elif http_method == 'GET' and path == '/sessions':
             return handle_get_sessions(event, cors_headers)
             
@@ -93,6 +98,40 @@ def handle_create_session(event, headers):
     except Exception as e:
         logger.error(f"Error creating session in DynamoDB: {str(e)}")
         return create_response(500, {'success': False, 'error': 'Could not create session'}, headers)
+
+
+def handle_generate_upload_url(event, headers):
+    """Handles POST /sessions/{sessionId}/upload-video - Generates a presigned S3 URL."""
+    try:
+        session_id = event.get('pathParameters', {}).get('sessionId')
+        if not session_id:
+            return create_response(400, {'success': False, 'error': 'sessionId path parameter is required.'}, headers)
+
+        body = json.loads(event.get('body', '{}'))
+        filename = body.get('filename')
+        if not filename:
+            return create_response(400, {'success': False, 'error': 'filename is required in the request body.'}, headers)
+
+        content_type = body.get('contentType')
+        if not content_type:
+            return create_response(400, {'success': False, 'error': 'contentType is required in the request body.'}, headers)
+
+        # Generate a unique key for the S3 object
+        object_key = f"uploads/{session_id}/{filename}"
+
+        # Generate the presigned URL
+        presigned_url = s3_client.generate_presigned_url(
+            'put_object',
+            Params={'Bucket': S3_BUCKET_NAME, 'Key': object_key, 'ContentType': content_type},
+            ExpiresIn=3600  # URL expires in 1 hour
+        )
+        
+        logger.info(f"Generated presigned URL for session {session_id}")
+        return create_response(200, {'success': True, 'uploadUrl': presigned_url, 'objectKey': object_key}, headers)
+
+    except Exception as e:
+        logger.error(f"Error generating presigned URL: {str(e)}")
+        return create_response(500, {'success': False, 'error': 'Could not generate upload URL'}, headers)
 
 
 def handle_get_sessions(event, headers):
