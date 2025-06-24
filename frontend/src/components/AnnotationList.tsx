@@ -4,16 +4,22 @@ import { Edit2, Trash2 } from 'lucide-react';
 
 interface Annotation {
   id: string;
+  videoId: string;
   startTime: number;
   endTime: number;
   label: string;
+  confidence: number;
+  handShape?: string;
+  location?: string;
   notes?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface AnnotationListProps {
   annotations: Annotation[];
-  onEdit: (annotation: Annotation) => void;
-  onDelete: (id: string) => void;
+  onEdit: (annotationId: string, updates: Partial<Annotation>) => void;
+  onDelete: (annotationId: string) => void;
   onSelect: (annotation: Annotation) => void;
   selectedAnnotationId?: string;
 }
@@ -43,6 +49,16 @@ export default function AnnotationList({
               <p className="text-xs text-muted-foreground">
                 {annotation.startTime.toFixed(2)}s - {annotation.endTime.toFixed(2)}s
               </p>
+              {annotation.confidence < 1.0 && (
+                <p className="text-xs text-orange-600">
+                  Confidence: {(annotation.confidence * 100).toFixed(1)}%
+                </p>
+              )}
+              {annotation.handShape && (
+                <p className="text-xs text-blue-600">
+                  Hand Shape: {annotation.handShape}
+                </p>
+              )}
               {annotation.notes && (
                 <p className="text-xs text-muted-foreground mt-1">
                   {annotation.notes}
@@ -56,7 +72,11 @@ export default function AnnotationList({
                 className="h-8 w-8 p-0"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onEdit(annotation);
+                  // For now, just show an alert - you can implement a proper edit dialog later
+                  const newLabel = prompt('Enter new label:', annotation.label);
+                  if (newLabel && newLabel !== annotation.label) {
+                    onEdit(annotation.id, { label: newLabel });
+                  }
                 }}
               >
                 <Edit2 className="h-4 w-4" />
@@ -68,7 +88,9 @@ export default function AnnotationList({
                 className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onDelete(annotation.id);
+                  if (confirm('Are you sure you want to delete this annotation?')) {
+                    onDelete(annotation.id);
+                  }
                 }}
               >
                 <Trash2 className="h-4 w-4" />
