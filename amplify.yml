@@ -3,12 +3,13 @@ frontend:
   phases:
     preBuild:
       commands:
-        - ls -la  # Debug: Confirm directory structure
+        - nvm install 20
+        - nvm use 20
+        - ls -la
         - cd frontend
         - npm install
     build:
       commands:
-        - cd frontend
         - npm run build
   artifacts:
     baseDirectory: frontend/dist
