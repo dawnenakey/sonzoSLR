@@ -45,30 +45,42 @@ def lambda_handler(event, context):
         'Access-Control-Allow-Methods': 'OPTIONS,POST,GET'
     }
 
-    # Router
     try:
         http_method = event.get('httpMethod')
         # The actual path is available in requestContext
         path = event.get('requestContext', {}).get('resourcePath', event.get('path'))
+        path_params = event.get('pathParameters', {})
 
         if http_method == 'OPTIONS':
             return create_response(200, 'CORS preflight OK', cors_headers)
-        
+
+        # Handle /videos/{proxy+} routing
+        if path.startswith('/videos/') and 'proxy' in path_params:
+            proxy = path_params['proxy']
+            parts = proxy.split('/')
+            if len(parts) >= 2:
+                video_id = '/'.join(parts[:-1])
+                action = parts[-1]
+                if action == 'annotations':
+                    if http_method == 'GET':
+                        return handle_get_annotations(event, cors_headers, video_id)
+                    elif http_method == 'POST':
+                        return handle_create_annotation(event, cors_headers, video_id)
+                elif action == 'stream':
+                    if http_method == 'GET':
+                        return handle_get_stream(event, cors_headers, video_id)
+                else:
+                    return create_response(404, {'success': False, 'error': 'Unknown action'}, cors_headers)
+            else:
+                return create_response(400, {'success': False, 'error': 'Invalid proxy path'}, cors_headers)
+
+        # Other routes
         elif http_method == 'POST' and path == '/sessions':
             return handle_create_session(event, cors_headers)
-
         elif http_method == 'POST' and path == '/sessions/{sessionId}/upload-video':
             return handle_generate_upload_url(event, cors_headers)
-
         elif http_method == 'GET' and path == '/sessions':
             return handle_get_sessions(event, cors_headers)
-            
-        elif http_method == 'GET' and path == '/videos/{proxy+}/annotations':
-            return handle_get_annotations(event, cors_headers)
-
-        elif http_method == 'POST' and path == '/videos/{proxy+}/annotations':
-            return handle_create_annotation(event, cors_headers)
-            
         else:
             logger.warning(f"No route matched for method '{http_method}' and path '{path}'")
             return create_response(404, {'success': False, 'error': 'Not Found'}, cors_headers)
@@ -194,14 +206,11 @@ def handle_get_sessions(event, headers):
         return create_response(500, {'success': False, 'error': 'Could not retrieve sessions'}, headers)
 
 
-def handle_get_annotations(event, headers):
+def handle_get_annotations(event, headers, video_id):
     """Handles GET /videos/{proxy+}/annotations - Retrieves all annotations for a video (videoId may contain slashes)."""
     try:
-        video_id = event.get('pathParameters', {}).get('proxy')
         if not video_id:
             return create_response(400, {'success': False, 'error': 'videoId (proxy path parameter) is required.'}, headers)
-
-        # Query DynamoDB for all annotations with this video_id
         response = table.scan(
             FilterExpression='video_id = :v',
             ExpressionAttributeValues={':v': video_id}
@@ -213,13 +222,11 @@ def handle_get_annotations(event, headers):
         return create_response(500, {'success': False, 'error': 'Could not retrieve annotations'}, headers)
 
 
-def handle_create_annotation(event, headers):
+def handle_create_annotation(event, headers, video_id):
     """Handles POST /videos/{proxy+}/annotations - Creates a new annotation for a video (videoId may contain slashes)."""
     try:
-        video_id = event.get('pathParameters', {}).get('proxy')
         if not video_id:
             return create_response(400, {'success': False, 'error': 'videoId (proxy path parameter) is required.'}, headers)
-
         body = json.loads(event.get('body', '{}'))
         timestamp = datetime.utcnow().isoformat()
         item = {
@@ -231,13 +238,17 @@ def handle_create_annotation(event, headers):
         table.put_item(Item=item)
         logger.info(f"Successfully created annotation for video {video_id}")
         return create_response(201, {'success': True, 'video_id': video_id}, headers)
-
     except json.JSONDecodeError as e:
         logger.error(f"Invalid JSON in request body: {str(e)}")
         return create_response(400, {'success': False, 'error': 'Invalid JSON format'}, headers)
     except Exception as e:
         logger.error(f"Error creating annotation in DynamoDB: {str(e)}")
         return create_response(500, {'success': False, 'error': 'Could not create annotation'}, headers)
+
+
+# Placeholder for stream handler
+def handle_get_stream(event, headers, video_id):
+    return create_response(501, {'success': False, 'error': 'Stream not implemented'}, headers)
 
 
 # --- Utility Functions ---
