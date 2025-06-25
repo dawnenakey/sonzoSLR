@@ -47,15 +47,16 @@ def lambda_handler(event, context):
 
     try:
         http_method = event.get('httpMethod')
-        # The actual path is available in requestContext
         path = event.get('requestContext', {}).get('resourcePath', event.get('path'))
         path_params = event.get('pathParameters', {})
+        logger.info(f"path: {path}")
+        logger.info(f"path_params: {path_params}")
 
         if http_method == 'OPTIONS':
             return create_response(200, 'CORS preflight OK', cors_headers)
 
-        # Handle /videos/{proxy+} routing
-        if path.startswith('/videos/') and 'proxy' in path_params:
+        # Route based on presence of 'proxy' path parameter
+        if 'proxy' in path_params:
             proxy = path_params['proxy']
             parts = proxy.split('/')
             if len(parts) >= 2:
