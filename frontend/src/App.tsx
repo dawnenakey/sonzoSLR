@@ -129,14 +129,12 @@ function App() {
   }, [currentVideo]);
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <div className="flex justify-between items-center w-full max-w-7xl mx-auto px-4">
-          <h1>SpokHand SLR Annotation Tool</h1>
-        </div>
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
+      <header className="w-full bg-white shadow p-4 flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-blue-700">SpokHand SLR Annotation Tool</h1>
+        {/* Add logo or user menu here if desired */}
       </header>
-      <main className="p-4 max-w-7xl mx-auto">
-        {/* Session Management and Video Upload UI remains unchanged */}
+      <main className="bg-white rounded-lg shadow-lg p-8 mt-8 w-full max-w-3xl flex flex-col items-center">
         <div className="video-container mx-auto bg-black rounded-lg overflow-hidden">
           {videoUrl && <VideoPlayer src={videoUrl} onTimeUpdate={setCurrentTime} onDurationChange={setVideoDuration} />}
         </div>
