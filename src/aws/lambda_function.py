@@ -57,12 +57,11 @@ def lambda_handler(event, context):
             logger.info("OPTIONS request - returning CORS preflight OK")
             return create_response(200, 'CORS preflight OK', cors_headers)
 
-        # Handle direct camera upload
         if http_method == 'POST' and (path == '/camera-upload' or path.endswith('/camera-upload')):
             logger.info("Routing to handle_direct_camera_upload")
             return handle_direct_camera_upload(event, cors_headers)
 
-        # Handle /videos/{proxy+} resource
+        # Always check for proxy path param
         if 'proxy' in path_params:
             logger.info("Routing for /videos/{proxy+} resource")
             proxy = path_params['proxy']
@@ -99,19 +98,18 @@ def lambda_handler(event, context):
                 logger.warning(f"Unknown action: {action}")
                 return create_response(404, {'success': False, 'error': 'Unknown action'}, cors_headers)
 
-        # Other explicit routes
-        elif http_method == 'POST' and path == '/sessions':
+        if http_method == 'POST' and path == '/sessions':
             logger.info("Routing to handle_create_session")
             return handle_create_session(event, cors_headers)
-        elif http_method == 'POST' and path == '/sessions/{sessionId}/upload-video':
+        if http_method == 'POST' and path == '/sessions/{sessionId}/upload-video':
             logger.info("Routing to handle_generate_upload_url")
             return handle_generate_upload_url(event, cors_headers)
-        elif http_method == 'GET' and path == '/sessions':
+        if http_method == 'GET' and path == '/sessions':
             logger.info("Routing to handle_get_sessions")
             return handle_get_sessions(event, cors_headers)
-        else:
-            logger.warning(f"No route matched for method '{http_method}' and path '{path}' - returning 404")
-            return create_response(404, {'success': False, 'error': 'Not Found'}, cors_headers)
+
+        logger.warning(f"No route matched for method '{http_method}' and path '{path}' - returning 404")
+        return create_response(404, {'success': False, 'error': 'Not Found'}, cors_headers)
 
     except Exception as e:
         logger.error(f"!!! Unhandled exception: {str(e)}")
