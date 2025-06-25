@@ -62,6 +62,12 @@ def lambda_handler(event, context):
 
         elif http_method == 'GET' and path == '/sessions':
             return handle_get_sessions(event, cors_headers)
+
+        elif http_method == 'GET' and path == '/videos/{videoId}/annotations':
+            return handle_get_annotations(event, cors_headers)
+
+        elif http_method == 'POST' and path == '/videos/{videoId}/annotations':
+            return handle_create_annotation(event, cors_headers)
             
         else:
             logger.warning(f"No route matched for method '{http_method}' and path '{path}'")
@@ -107,14 +113,46 @@ def handle_generate_upload_url(event, headers):
         if not session_id:
             return create_response(400, {'success': False, 'error': 'sessionId path parameter is required.'}, headers)
 
-        body = json.loads(event.get('body', '{}'))
-        filename = body.get('filename')
+        # Handle both JSON and FormData requests
+        body = event.get('body', '{}')
+        content_type = event.get('headers', {}).get('content-type', '')
+        
+        filename = None
+        file_content_type = None
+        
+        if 'application/json' in content_type:
+            # JSON request
+            try:
+                body_data = json.loads(body) if body else {}
+                filename = body_data.get('filename')
+                file_content_type = body_data.get('contentType')
+            except json.JSONDecodeError:
+                return create_response(400, {'success': False, 'error': 'Invalid JSON in request body.'}, headers)
+        else:
+            # FormData request - extract from multipart form data
+            # For now, we'll use default values since FormData parsing in Lambda is complex
+            # The frontend should send the filename and content type in the request
+            filename = f"video_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.mp4"
+            file_content_type = 'video/mp4'
+            
+            # Try to extract from body if it's a simple string
+            if body and isinstance(body, str):
+                # Look for filename in the body
+                import re
+                filename_match = re.search(r'filename="([^"]+)"', body)
+                if filename_match:
+                    filename = filename_match.group(1)
+                
+                # Look for content type
+                content_type_match = re.search(r'Content-Type: ([^\r\n]+)', body)
+                if content_type_match:
+                    file_content_type = content_type_match.group(1).strip()
+
         if not filename:
             return create_response(400, {'success': False, 'error': 'filename is required in the request body.'}, headers)
 
-        content_type = body.get('contentType')
-        if not content_type:
-            return create_response(400, {'success': False, 'error': 'contentType is required in the request body.'}, headers)
+        if not file_content_type:
+            file_content_type = 'video/mp4'  # Default content type
 
         # Generate a unique key for the S3 object
         object_key = f"uploads/{session_id}/{filename}"
@@ -122,12 +160,21 @@ def handle_generate_upload_url(event, headers):
         # Generate the presigned URL
         presigned_url = s3_client.generate_presigned_url(
             'put_object',
-            Params={'Bucket': S3_BUCKET_NAME, 'Key': object_key, 'ContentType': content_type},
+            Params={'Bucket': S3_BUCKET_NAME, 'Key': object_key, 'ContentType': file_content_type},
             ExpiresIn=3600  # URL expires in 1 hour
         )
         
-        logger.info(f"Generated presigned URL for session {session_id}")
-        return create_response(200, {'success': True, 'uploadUrl': presigned_url, 'objectKey': object_key}, headers)
+        # Return a video object that matches what the frontend expects
+        video_object = {
+            'id': object_key,  # Use object_key as the video ID
+            'name': filename,
+            'url': f"https://{S3_BUCKET_NAME}.s3.amazonaws.com/{object_key}",
+            'sessionId': session_id,
+            'uploadUrl': presigned_url
+        }
+        
+        logger.info(f"Generated presigned URL for session {session_id}, filename: {filename}")
+        return create_response(200, {'success': True, 'video': video_object, 'uploadUrl': presigned_url, 'objectKey': object_key}, headers)
 
     except Exception as e:
         logger.error(f"Error generating presigned URL: {str(e)}")
@@ -145,6 +192,55 @@ def handle_get_sessions(event, headers):
     except Exception as e:
         logger.error(f"Error scanning sessions from DynamoDB: {str(e)}")
         return create_response(500, {'success': False, 'error': 'Could not retrieve sessions'}, headers)
+
+
+def handle_get_annotations(event, headers):
+    """Handles GET /videos/{videoId}/annotations - Retrieves all annotations for a video."""
+    try:
+        video_id = event.get('pathParameters', {}).get('videoId')
+        if not video_id:
+            return create_response(400, {'success': False, 'error': 'videoId path parameter is required.'}, headers)
+
+        # Query DynamoDB for all annotations with this video_id
+        # Assuming table has a GSI on video_id, or annotations are stored with video_id as partition key
+        response = table.scan(
+            FilterExpression='video_id = :v',
+            ExpressionAttributeValues={':v': video_id}
+        )
+        items = response.get('Items', [])
+        return create_response(200, {'success': True, 'annotations': items}, headers)
+    except Exception as e:
+        logger.error(f"Error retrieving annotations for video {video_id}: {str(e)}")
+        return create_response(500, {'success': False, 'error': 'Could not retrieve annotations'}, headers)
+
+
+def handle_create_annotation(event, headers):
+    """Handles POST /videos/{videoId}/annotations - Creates a new annotation for a video."""
+    try:
+        video_id = event.get('pathParameters', {}).get('videoId')
+        if not video_id:
+            return create_response(400, {'success': False, 'error': 'videoId path parameter is required.'}, headers)
+
+        body = json.loads(event.get('body', '{}'))
+        timestamp = datetime.utcnow().isoformat()
+        
+        item = {
+            'timestamp': timestamp,
+            'video_id': video_id,
+            'annotation': body.get('annotation', ''),
+            'createdAt': timestamp
+        }
+        
+        table.put_item(Item=item)
+        logger.info(f"Successfully created annotation for video {video_id}")
+        return create_response(201, {'success': True, 'video_id': video_id}, headers)
+
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON in request body: {str(e)}")
+        return create_response(400, {'success': False, 'error': 'Invalid JSON format'}, headers)
+    except Exception as e:
+        logger.error(f"Error creating annotation in DynamoDB: {str(e)}")
+        return create_response(500, {'success': False, 'error': 'Could not create annotation'}, headers)
 
 
 # --- Utility Functions ---

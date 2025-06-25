@@ -49,7 +49,22 @@ export const sessionAPI = {
       throw new Error(`Failed to create session: ${response.statusText}`);
     }
 
-    return response.json();
+    const result = await response.json();
+    
+    // Handle the backend response format: {success: true, session_id: "..."}
+    if (result.success && result.session_id) {
+      return {
+        id: result.session_id,
+        name: data.name,
+        description: data.description,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        status: 'active' as const,
+      };
+    } else {
+      // Fallback to assuming it's a direct Session object
+      return result;
+    }
   },
 
   // Get a session by ID
@@ -65,19 +80,54 @@ export const sessionAPI = {
 
   // Upload video to a session
   uploadVideo: async (sessionId: string, file: File): Promise<Video> => {
-    const formData = new FormData();
-    formData.append('video', file);
-
-    const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/upload-video`, {
+    // First, get a presigned URL for upload
+    const presignedResponse = await fetch(`${API_BASE_URL}/sessions/${sessionId}/upload-video`, {
       method: 'POST',
-      body: formData,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        filename: file.name,
+        contentType: file.type || 'video/mp4'
+      }),
     });
 
-    if (!response.ok) {
-      throw new Error(`Failed to upload video: ${response.statusText}`);
+    if (!presignedResponse.ok) {
+      throw new Error(`Failed to get upload URL: ${presignedResponse.statusText}`);
     }
 
-    return response.json();
+    const presignedData = await presignedResponse.json();
+    if (!presignedData.success) {
+      throw new Error(`Failed to get upload URL: ${presignedData.error}`);
+    }
+
+    // Upload the file directly to S3 using the presigned URL
+    const uploadResponse = await fetch(presignedData.uploadUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': file.type || 'video/mp4',
+      },
+      body: file,
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error(`Failed to upload video to S3: ${uploadResponse.statusText}`);
+    }
+
+    // Return the video object from the backend response
+    if (presignedData.video) {
+      return presignedData.video;
+    } else {
+      // Fallback to constructing the video object
+      return {
+        id: presignedData.objectKey,
+        sessionId,
+        filename: file.name,
+        size: file.size,
+        uploadedAt: new Date().toISOString(),
+        status: 'ready' as const,
+      };
+    }
   },
 };
 
@@ -162,7 +212,15 @@ export const annotationAPI = {
       throw new Error(`Failed to get annotations: ${response.statusText}`);
     }
 
-    return response.json();
+    const data = await response.json();
+    
+    // Handle the success response format from the backend
+    if (data.success && data.annotations) {
+      return data.annotations;
+    } else {
+      // Fallback to assuming the response is directly an array
+      return data;
+    }
   },
 };
 

@@ -183,9 +183,30 @@ const RemoteDataCollection: React.FC = () => {
     setUploadProgress(0);
 
     try {
-      const formData = new FormData();
-      formData.append('file', videoBlob, `recording_${Date.now()}.webm`);
+      const filename = `recording_${Date.now()}.webm`;
+      
+      // First, get a presigned URL for upload
+      const presignedResponse = await fetch(`${API_BASE_URL}/sessions/${currentSession.session_id}/upload-video`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filename: filename,
+          contentType: 'video/webm'
+        }),
+      });
 
+      if (!presignedResponse.ok) {
+        throw new Error(`Failed to get upload URL: ${presignedResponse.statusText}`);
+      }
+
+      const presignedData = await presignedResponse.json();
+      if (!presignedData.success) {
+        throw new Error(`Failed to get upload URL: ${presignedData.error}`);
+      }
+
+      // Upload the file directly to S3 using the presigned URL with progress tracking
       const xhr = new XMLHttpRequest();
       
       xhr.upload.onprogress = (event) => {
@@ -197,12 +218,9 @@ const RemoteDataCollection: React.FC = () => {
 
       xhr.onload = async () => {
         if (xhr.status === 200) {
-          const response = JSON.parse(xhr.responseText);
-          if (response.success) {
-            alert('Video uploaded successfully!');
-            await loadSessionVideos();
-            setUploadProgress(0);
-          }
+          alert('Video uploaded successfully!');
+          await loadSessionVideos();
+          setUploadProgress(0);
         } else {
           alert('Upload failed');
         }
@@ -215,8 +233,9 @@ const RemoteDataCollection: React.FC = () => {
         setUploadProgress(0);
       };
 
-      xhr.open('POST', `${API_BASE_URL}/sessions/${currentSession.session_id}/upload-video`);
-      xhr.send(formData);
+      xhr.open('PUT', presignedData.uploadUrl);
+      xhr.setRequestHeader('Content-Type', 'video/webm');
+      xhr.send(videoBlob);
 
     } catch (error) {
       console.error('Error uploading video:', error);

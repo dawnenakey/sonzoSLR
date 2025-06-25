@@ -67,6 +67,10 @@ function App() {
       }
       // Upload video to the session
       const video = await awsAPI.sessions.uploadVideo(session.id, selectedFile);
+      console.log('Uploaded video object:', video);
+      if (!video.id) {
+        alert('Upload succeeded but video.id is missing!');
+      }
       setCurrentVideo(video);
       alert('File uploaded successfully! You can now start annotating.');
     } catch (error) {
