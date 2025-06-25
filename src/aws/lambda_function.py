@@ -5,6 +5,7 @@ import logging
 import decimal
 import uuid
 from datetime import datetime
+import base64
 
 # --- Configuration ---
 logger = logging.getLogger()
@@ -54,6 +55,10 @@ def lambda_handler(event, context):
 
         if http_method == 'OPTIONS':
             return create_response(200, 'CORS preflight OK', cors_headers)
+
+        # Handle direct camera upload
+        if http_method == 'POST' and (path == '/camera-upload' or path.endswith('/camera-upload')):
+            return handle_direct_camera_upload(event, cors_headers)
 
         # Handle /videos/{proxy+} resource
         if 'proxy' in path_params:
@@ -257,6 +262,51 @@ def handle_create_annotation(event, headers, video_id):
 # Placeholder for stream handler
 def handle_get_stream(event, headers, video_id):
     return create_response(501, {'success': False, 'error': 'Stream not implemented'}, headers)
+
+
+def handle_direct_camera_upload(event, headers):
+    """
+    Handles POST /camera-upload - Direct upload of video from BRio or OAK camera.
+    Expects JSON body with fields: camera_type, filename, (optionally session_id), and video_data (base64-encoded).
+    """
+    try:
+        body = json.loads(event.get('body', '{}'))
+        camera_type = body.get('camera_type', 'unknown')
+        filename = body.get('filename', f"{camera_type}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.mp4")
+        video_data = body.get('video_data')
+        session_id = body.get('session_id', 'direct')
+
+        if not video_data:
+            return create_response(400, {'success': False, 'error': 'video_data (base64) is required.'}, headers)
+
+        # Decode base64 video data
+        video_bytes = base64.b64decode(video_data)
+
+        # S3 object key
+        object_key = f"camera_uploads/{camera_type}/{session_id}/{filename}"
+
+        # Upload to S3
+        s3_client.put_object(Bucket=S3_BUCKET_NAME, Key=object_key, Body=video_bytes, ContentType='video/mp4')
+
+        # Optionally, create a DynamoDB record
+        timestamp = datetime.utcnow().isoformat()
+        item = {
+            'timestamp': timestamp,
+            'camera_type': camera_type,
+            'session_id': session_id,
+            'video_id': object_key,
+            'filename': filename,
+            'createdAt': timestamp
+        }
+        table.put_item(Item=item)
+
+        video_url = f"https://{S3_BUCKET_NAME}.s3.amazonaws.com/{object_key}"
+        logger.info(f"Direct camera upload successful: {object_key}")
+        return create_response(201, {'success': True, 'video_url': video_url, 'objectKey': object_key}, headers)
+
+    except Exception as e:
+        logger.error(f"Error in direct camera upload: {str(e)}")
+        return create_response(500, {'success': False, 'error': 'Could not upload video'}, headers)
 
 
 # --- Utility Functions ---
