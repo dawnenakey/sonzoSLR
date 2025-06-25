@@ -54,48 +54,63 @@ def lambda_handler(event, context):
         logger.info(f"path_params: {path_params}")
 
         if http_method == 'OPTIONS':
+            logger.info("OPTIONS request - returning CORS preflight OK")
             return create_response(200, 'CORS preflight OK', cors_headers)
 
         # Handle direct camera upload
         if http_method == 'POST' and (path == '/camera-upload' or path.endswith('/camera-upload')):
+            logger.info("Routing to handle_direct_camera_upload")
             return handle_direct_camera_upload(event, cors_headers)
 
         # Handle /videos/{proxy+} resource
         if 'proxy' in path_params:
+            logger.info("Routing for /videos/{proxy+} resource")
             proxy = path_params['proxy']
             parts = proxy.split('/')
+            logger.info(f"Proxy parts: {parts}")
             if len(parts) < 2:
+                logger.warning("Proxy path too short, returning 400")
                 return create_response(400, {'success': False, 'error': 'Invalid proxy path'}, cors_headers)
 
             # The last part is the action (e.g., 'annotations')
             action = parts[-1]
             video_id = '/'.join(parts[:-1])
+            logger.info(f"Action: {action}, video_id: {video_id}")
 
             if action == 'annotations':
+                logger.info("Routing to handle_get_annotations or handle_create_annotation for annotations action")
                 if http_method == 'GET':
+                    logger.info("Calling handle_get_annotations")
                     return handle_get_annotations(event, cors_headers, video_id)
                 elif http_method == 'POST':
+                    logger.info("Calling handle_create_annotation")
                     return handle_create_annotation(event, cors_headers, video_id)
                 else:
+                    logger.warning("Method not allowed for annotations action")
                     return create_response(405, {'success': False, 'error': 'Method Not Allowed'}, cors_headers)
             elif action == 'stream':
+                logger.info("Routing to handle_get_stream for stream action")
                 if http_method == 'GET':
                     return handle_get_stream(event, cors_headers, video_id)
                 else:
+                    logger.warning("Method not allowed for stream action")
                     return create_response(405, {'success': False, 'error': 'Method Not Allowed'}, cors_headers)
             else:
-                # Unknown action
+                logger.warning(f"Unknown action: {action}")
                 return create_response(404, {'success': False, 'error': 'Unknown action'}, cors_headers)
 
         # Other explicit routes
         elif http_method == 'POST' and path == '/sessions':
+            logger.info("Routing to handle_create_session")
             return handle_create_session(event, cors_headers)
         elif http_method == 'POST' and path == '/sessions/{sessionId}/upload-video':
+            logger.info("Routing to handle_generate_upload_url")
             return handle_generate_upload_url(event, cors_headers)
         elif http_method == 'GET' and path == '/sessions':
+            logger.info("Routing to handle_get_sessions")
             return handle_get_sessions(event, cors_headers)
         else:
-            logger.warning(f"No route matched for method '{http_method}' and path '{path}'")
+            logger.warning(f"No route matched for method '{http_method}' and path '{path}' - returning 404")
             return create_response(404, {'success': False, 'error': 'Not Found'}, cors_headers)
 
     except Exception as e:
