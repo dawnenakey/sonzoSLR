@@ -35,7 +35,7 @@ def lambda_handler(event, context):
     Main Lambda handler for API Gateway requests.
     Routes requests to the appropriate handler based on HTTP method and path.
     """
-    logger.info(f"--- Spokhand Lambda v{VERSION} ---")
+    logger.info(f"--- Spokhand Lambda {VERSION} ---")
     logger.info(f"Received event: {json.dumps(event)}")
 
     # Standard CORS headers
@@ -55,27 +55,34 @@ def lambda_handler(event, context):
         if http_method == 'OPTIONS':
             return create_response(200, 'CORS preflight OK', cors_headers)
 
-        # Route based on presence of 'proxy' path parameter
+        # Handle /videos/{proxy+} resource
         if 'proxy' in path_params:
             proxy = path_params['proxy']
             parts = proxy.split('/')
-            if len(parts) >= 2:
-                video_id = '/'.join(parts[:-1])
-                action = parts[-1]
-                if action == 'annotations':
-                    if http_method == 'GET':
-                        return handle_get_annotations(event, cors_headers, video_id)
-                    elif http_method == 'POST':
-                        return handle_create_annotation(event, cors_headers, video_id)
-                elif action == 'stream':
-                    if http_method == 'GET':
-                        return handle_get_stream(event, cors_headers, video_id)
-                else:
-                    return create_response(404, {'success': False, 'error': 'Unknown action'}, cors_headers)
-            else:
+            if len(parts) < 2:
                 return create_response(400, {'success': False, 'error': 'Invalid proxy path'}, cors_headers)
 
-        # Other routes
+            # The last part is the action (e.g., 'annotations')
+            action = parts[-1]
+            video_id = '/'.join(parts[:-1])
+
+            if action == 'annotations':
+                if http_method == 'GET':
+                    return handle_get_annotations(event, cors_headers, video_id)
+                elif http_method == 'POST':
+                    return handle_create_annotation(event, cors_headers, video_id)
+                else:
+                    return create_response(405, {'success': False, 'error': 'Method Not Allowed'}, cors_headers)
+            elif action == 'stream':
+                if http_method == 'GET':
+                    return handle_get_stream(event, cors_headers, video_id)
+                else:
+                    return create_response(405, {'success': False, 'error': 'Method Not Allowed'}, cors_headers)
+            else:
+                # Unknown action
+                return create_response(404, {'success': False, 'error': 'Unknown action'}, cors_headers)
+
+        # Other explicit routes
         elif http_method == 'POST' and path == '/sessions':
             return handle_create_session(event, cors_headers)
         elif http_method == 'POST' and path == '/sessions/{sessionId}/upload-video':
