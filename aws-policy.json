@@ -77,6 +77,16 @@
                 "iam:DeleteInstanceProfile"
             ],
             "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:Scan",
+                "dynamodb:Query",
+                "dynamodb:PutItem",
+                "dynamodb:UpdateItem"
+            ],
+            "Resource": "arn:aws:dynamodb:us-east-1:199238241458:table/spokhand-data-collection"
         }
     ]
 } 

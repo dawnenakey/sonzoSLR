@@ -9,7 +9,8 @@
                 "https://127.0.0.1:5174", 
                 "https://localhost:5174",
                 "https://127.0.0.1:5175",
-                "https://localhost:5175"
+                "https://localhost:5175",
+                "https://main.djz1od5v7st0v.amplifyapp.com"
             ],
             "ExposeHeaders": ["ETag"]
         }

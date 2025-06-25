@@ -10,8 +10,8 @@ echo ""
 echo "2. Testing Lambda function directly..."
 aws lambda invoke --function-name spokhand-processor --payload '{"httpMethod":"POST","path":"/sessions","body":"{\"name\":\"Debug Test\",\"description\":\"Debug test\"}"}' debug_response.json
 if [ -f debug_response.json ]; then
-    cat debug_response.json
-    rm debug_response.json
+cat debug_response.json
+rm debug_response.json
 else
     echo "No response file generated"
 fi

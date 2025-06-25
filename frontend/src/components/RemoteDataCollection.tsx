@@ -218,9 +218,9 @@ const RemoteDataCollection: React.FC = () => {
 
       xhr.onload = async () => {
         if (xhr.status === 200) {
-          alert('Video uploaded successfully!');
-          await loadSessionVideos();
-          setUploadProgress(0);
+            alert('Video uploaded successfully!');
+            await loadSessionVideos();
+            setUploadProgress(0);
         } else {
           alert('Upload failed');
         }

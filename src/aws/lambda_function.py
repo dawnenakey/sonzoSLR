@@ -62,11 +62,11 @@ def lambda_handler(event, context):
 
         elif http_method == 'GET' and path == '/sessions':
             return handle_get_sessions(event, cors_headers)
-
-        elif http_method == 'GET' and path == '/videos/{videoId}/annotations':
+            
+        elif http_method == 'GET' and path == '/videos/{proxy+}/annotations':
             return handle_get_annotations(event, cors_headers)
 
-        elif http_method == 'POST' and path == '/videos/{videoId}/annotations':
+        elif http_method == 'POST' and path == '/videos/{proxy+}/annotations':
             return handle_create_annotation(event, cors_headers)
             
         else:
@@ -195,14 +195,13 @@ def handle_get_sessions(event, headers):
 
 
 def handle_get_annotations(event, headers):
-    """Handles GET /videos/{videoId}/annotations - Retrieves all annotations for a video."""
+    """Handles GET /videos/{proxy+}/annotations - Retrieves all annotations for a video (videoId may contain slashes)."""
     try:
-        video_id = event.get('pathParameters', {}).get('videoId')
+        video_id = event.get('pathParameters', {}).get('proxy')
         if not video_id:
-            return create_response(400, {'success': False, 'error': 'videoId path parameter is required.'}, headers)
+            return create_response(400, {'success': False, 'error': 'videoId (proxy path parameter) is required.'}, headers)
 
         # Query DynamoDB for all annotations with this video_id
-        # Assuming table has a GSI on video_id, or annotations are stored with video_id as partition key
         response = table.scan(
             FilterExpression='video_id = :v',
             ExpressionAttributeValues={':v': video_id}
@@ -215,22 +214,20 @@ def handle_get_annotations(event, headers):
 
 
 def handle_create_annotation(event, headers):
-    """Handles POST /videos/{videoId}/annotations - Creates a new annotation for a video."""
+    """Handles POST /videos/{proxy+}/annotations - Creates a new annotation for a video (videoId may contain slashes)."""
     try:
-        video_id = event.get('pathParameters', {}).get('videoId')
+        video_id = event.get('pathParameters', {}).get('proxy')
         if not video_id:
-            return create_response(400, {'success': False, 'error': 'videoId path parameter is required.'}, headers)
+            return create_response(400, {'success': False, 'error': 'videoId (proxy path parameter) is required.'}, headers)
 
         body = json.loads(event.get('body', '{}'))
         timestamp = datetime.utcnow().isoformat()
-        
         item = {
             'timestamp': timestamp,
             'video_id': video_id,
             'annotation': body.get('annotation', ''),
             'createdAt': timestamp
         }
-        
         table.put_item(Item=item)
         logger.info(f"Successfully created annotation for video {video_id}")
         return create_response(201, {'success': True, 'video_id': video_id}, headers)
