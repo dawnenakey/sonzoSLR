@@ -5,26 +5,28 @@ frontend:
       commands:
         - nvm install 20
         - nvm use 20
+        - node -v || { echo "Node.js installation failed"; exit 1; }
         - 'echo "Current directory: $(pwd)"'
         - ls -la
         - cd frontend || { echo "frontend directory not found"; exit 1; }
         - 'echo "Frontend directory contents:"'
         - ls -la
-        - npm install  # Must be npm install, not --omit=dev
+        - cd src || { echo "src directory not found"; exit 1; }  # Change to src directory
+        - npm install  # Install dependencies in src
     build:
       commands:
         - 'echo "Building frontend..."'
         - 'echo "Environment variables:"'
         - 'echo "NODE_ENV: $NODE_ENV"'
         - 'echo "VITE_DATA_COLLECTION_API: ${VITE_DATA_COLLECTION_API:+SET}"'
-        - npm run build
+        - npm run build  # Run build from src
         - 'echo "Build completed. Contents of dist:"'
         - ls -la dist/
   artifacts:
-    baseDirectory: frontend/dist
+    baseDirectory: frontend/dist  # Adjust if dist is output in src/dist
     files:
       - '**/*'
   cache:
     paths:
-      - frontend/node_modules/**/*
+      - frontend/src/node_modules/**/*
       - frontend/.npm-cache/**/*
