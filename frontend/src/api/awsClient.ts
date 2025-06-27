@@ -166,7 +166,7 @@ export const annotationAPI = {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify({ annotation: data }),
     });
 
     if (!response.ok) {
@@ -230,5 +230,7 @@ export const awsAPI = {
   videos: videoAPI,
   annotations: annotationAPI,
 };
+
+export const Annotation = annotationAPI;
 
 export default awsAPI; 

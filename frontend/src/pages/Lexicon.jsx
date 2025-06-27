@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -50,7 +49,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { Annotation as AnnotationEntity } from '@/api/entities';
-import { Video as VideoEntity } from '@/api/entities';
+import { videoAPI } from '@/api/awsClient';
 import { formatTime } from '../components/timeUtils';
 import AnnotationDetailDialog from '../components/AnnotationDetailDialog';
 
@@ -106,7 +105,7 @@ export default function SegmentsPage() {
       const videoData = {};
       for (const videoId of videoIds) {
         try {
-          const video = await VideoEntity.get(videoId);
+          const video = await videoAPI.get(videoId);
           videoData[videoId] = video;
         } catch (error) {
           console.warn(`Video with ID ${videoId} not found, creating placeholder`, error);

@@ -1,10 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Film, Plus, ArrowRight, Play, Calendar, Clock, Trash2, MoreVertical, Edit2, AlertCircle, UserCircle, Download, Share2 } from 'lucide-react'; // Removed Copy as it wasn't used in the last provided version
 import { Button } from '@/components/ui/button';
-import { Video as VideoEntity } from '@/api/entities';
 import { Annotation as AnnotationEntity } from '@/api/entities';
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
@@ -26,9 +24,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import ImportVideoDialog from '../components/ImportVideoDialog';
-import { User } from '@/api/entities';
 import { Badge } from "@/components/ui/badge";
 import { formatTime } from '../components/timeUtils';
+import Header from '../components/Header';
+import LiveCameraAnnotator from '../components/LiveCameraAnnotator';
+import { videoAPI } from '@/api/awsClient';
 
 const FALLBACK_VIDEOS = [
   {
@@ -73,7 +73,7 @@ export default function Home() {
     setApiError(false);
     try {
       const [fetchedVideos, allAnnotations] = await Promise.all([
-        VideoEntity.list('-created_date'),
+        videoAPI.list('-created_date'),
         AnnotationEntity.list()
       ]);
 
@@ -143,7 +143,7 @@ export default function Home() {
         return;
       }
       
-      await VideoEntity.create(videoData);
+      await videoAPI.create(videoData);
       await fetchVideosAndAnnotations(); // Refresh videos and annotations
       toast({
         title: "Video Imported Successfully",
@@ -178,7 +178,7 @@ export default function Home() {
         return;
       }
       
-      await VideoEntity.update(videoToEdit.id, videoData);
+      await videoAPI.update(videoToEdit.id, videoData);
       await fetchVideosAndAnnotations(); // Refresh videos and annotations
       toast({
         title: "Video Updated",
@@ -216,7 +216,7 @@ export default function Home() {
       const videoAnnotations = await AnnotationEntity.filter({ video_id: videoToDelete.id });
       
       // Delete the video first
-      await VideoEntity.delete(videoToDelete.id);
+      await videoAPI.delete(videoToDelete.id);
       
       // Then delete all associated annotations
       for (const annotation of videoAnnotations) {
@@ -342,254 +342,267 @@ export default function Home() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6"> {/* Added padding to main container */}
-      {apiError && (
-        <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
-          <div className="text-amber-500 shrink-0 mt-0.5">
-            <AlertCircle className="h-5 w-5" />
-          </div>
-          <div>
-            <h3 className="font-medium text-amber-800">Connection Issue</h3>
-            <p className="text-amber-700 text-sm mt-1">
-              We're having trouble connecting to the server. You're viewing sample videos in demo mode.
-              Your changes won't be saved permanently. Try refreshing the page.
-            </p>
-          </div>
-        </div>
-      )}
-      
-      <section>
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-          <h2 className="text-2xl font-bold text-gray-900">Your Video Library</h2>
-          <Button 
-            variant="outline" 
-            onClick={() => { setVideoToEdit(null); setIsImportDialogOpen(true); }}
-            className="w-full sm:w-auto"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Import Video
-          </Button>
-        </div>
-      </section>
-
-      {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-xl overflow-hidden shadow-lg">
-                <Skeleton className="h-40 w-full" />
-                <div className="p-4">
-                  <Skeleton className="h-6 w-3/4 mb-2" />
-                  <Skeleton className="h-4 w-1/2 mb-3" />
-                  <Skeleton className="h-8 w-1/3 ml-auto" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : videos.length === 0 ? (
-          <div className="bg-white rounded-xl p-6 sm:p-8 text-center border-2 border-dashed border-gray-200">
-            <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-              <Film className="h-8 w-8 text-gray-400" />
+    <>
+      <Header />
+      <div className="max-w-7xl mx-auto p-4 sm:p-6">
+        {/* Live Camera Annotator Section */}
+        <section className="mb-8">
+          <h2 className="text-xl font-semibold mb-2">Record from Live Camera (Brio/Oak)</h2>
+          <LiveCameraAnnotator onVideoUploaded={async (file) => {
+            // Simulate ImportVideoDialog's upload flow: open dialog with file pre-selected
+            setIsImportDialogOpen(true);
+            // Optionally, you could auto-fill ImportVideoDialog with the file, or handle upload directly here
+            // For now, user will fill in details in the dialog after upload
+          }} />
+        </section>
+        {apiError && (
+          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+            <div className="text-amber-500 shrink-0 mt-0.5">
+              <AlertCircle className="h-5 w-5" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No videos yet</h3>
-            <p className="text-gray-500 mb-6 max-w-md mx-auto">
-              Import your first sign language video to start segmenting and annotating.
-            </p>
-            <Button onClick={() => { setVideoToEdit(null); setIsImportDialogOpen(true); }} size="lg">
+            <div>
+              <h3 className="font-medium text-amber-800">Connection Issue</h3>
+              <p className="text-amber-700 text-sm mt-1">
+                We're having trouble connecting to the server. You're viewing sample videos in demo mode.
+                Your changes won't be saved permanently. Try refreshing the page.
+              </p>
+            </div>
+          </div>
+        )}
+        
+        <section>
+          <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+            <h2 className="text-2xl font-bold text-gray-900">Your Video Library</h2>
+            <Button 
+              variant="outline" 
+              onClick={() => { setVideoToEdit(null); setIsImportDialogOpen(true); }}
+              className="w-full sm:w-auto"
+            >
               <Plus className="mr-2 h-4 w-4" />
               Import Video
             </Button>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {videos.map((video, index) => {
-              const hasValidId = video && video.id && String(video.id).trim() !== "";
-              const annotatorUrl = hasValidId ? createPageUrl(`Annotator?id=${video.id}`) : "#";
-              const videoHasAnnotations = (annotationsMap[video.id] || []).length > 0;
+        </section>
 
-              return (
-              <div key={video.id || `no-id-${index}`} className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group flex flex-col relative">
-                <div className="absolute top-2 right-2 z-10">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 bg-black/50 hover:bg-black/70 text-white rounded-full"
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem 
-                        className="cursor-pointer flex items-center gap-2"
-                        onClick={() => { setVideoToEdit(video); setIsImportDialogOpen(true); }}
-                        disabled={!hasValidId || apiError}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                        Edit Details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        className="cursor-pointer flex items-center gap-2"
-                        onClick={() => handleDownloadVideo(video.url, video.title)}
-                        disabled={!video.url || apiError}
-                      >
-                        <Download className="h-4 w-4" />
-                        Download Video
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        className="cursor-pointer flex items-center gap-2"
-                        onClick={() => handleExportAnnotations(video.id, video.title)}
-                        disabled={!videoHasAnnotations || !hasValidId || apiError}
-                      >
-                        <Download className="h-4 w-4" />
-                        Export JSON
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        className="cursor-pointer flex items-center gap-2"
-                        onClick={() => hasValidId && handleShareVideo(video.id, video.title)}
-                        disabled={!hasValidId || apiError}
-                      >
-                        <Share2 className="h-4 w-4" />
-                        Share
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem 
-                        className="text-red-600 hover:!text-red-700 hover:!bg-red-50 cursor-pointer flex items-center gap-2"
-                        onClick={() => setVideoToDelete(video)}
-                        disabled={!hasValidId || apiError}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Delete Video
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+        {isLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-white rounded-xl overflow-hidden shadow-lg">
+                  <Skeleton className="h-40 w-full" />
+                  <div className="p-4">
+                    <Skeleton className="h-6 w-3/4 mb-2" />
+                    <Skeleton className="h-4 w-1/2 mb-3" />
+                    <Skeleton className="h-8 w-1/3 ml-auto" />
+                  </div>
                 </div>
-              
-                <Link
-                  to={annotatorUrl}
-                  className={`aspect-video relative overflow-hidden block ${!hasValidId ? 'pointer-events-none opacity-70' : ''}`}
-                  onClick={(e) => !hasValidId && e.preventDefault()}
-                  aria-disabled={!hasValidId}
-                  tabIndex={!hasValidId ? -1 : undefined}
-                >
-                  {video.thumbnail_url ? (
-                    <img 
-                      src={video.thumbnail_url} 
-                      alt={video.title} 
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
-                  ) : index < 5 ? ( 
-                    <img 
-                      src={getThumbnailUrl(index)} 
-                      alt={video.title} 
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className={`w-full h-full flex items-center justify-center ${getVideoColor(video.title)}`}>
-                      <Film className="h-16 w-16 text-white/90" />
-                    </div>
-                  )}
-                  
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent opacity-80 group-hover:opacity-70 transition-opacity"></div>
-                  
-                  {hasValidId && (
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <div className="bg-white/90 rounded-full p-3 shadow-lg transform group-hover:scale-110 transition-transform">
-                        <Play className="h-8 w-8 text-indigo-600 fill-indigo-600" />
+              ))}
+            </div>
+          ) : videos.length === 0 ? (
+            <div className="bg-white rounded-xl p-6 sm:p-8 text-center border-2 border-dashed border-gray-200">
+              <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                <Film className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No videos yet</h3>
+              <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                Import your first sign language video to start segmenting and annotating.
+              </p>
+              <Button onClick={() => { setVideoToEdit(null); setIsImportDialogOpen(true); }} size="lg">
+                <Plus className="mr-2 h-4 w-4" />
+                Import Video
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {videos.map((video, index) => {
+                const hasValidId = video && video.id && String(video.id).trim() !== "";
+                const annotatorUrl = hasValidId ? createPageUrl(`Annotator?id=${video.id}`) : "#";
+                const videoHasAnnotations = (annotationsMap[video.id] || []).length > 0;
+
+                return (
+                <div key={video.id || `no-id-${index}`} className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group flex flex-col relative">
+                  <div className="absolute top-2 right-2 z-10">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 bg-black/50 hover:bg-black/70 text-white rounded-full"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem 
+                          className="cursor-pointer flex items-center gap-2"
+                          onClick={() => { setVideoToEdit(video); setIsImportDialogOpen(true); }}
+                          disabled={!hasValidId || apiError}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                          Edit Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          className="cursor-pointer flex items-center gap-2"
+                          onClick={() => handleDownloadVideo(video.url, video.title)}
+                          disabled={!video.url || apiError}
+                        >
+                          <Download className="h-4 w-4" />
+                          Download Video
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          className="cursor-pointer flex items-center gap-2"
+                          onClick={() => handleExportAnnotations(video.id, video.title)}
+                          disabled={!videoHasAnnotations || !hasValidId || apiError}
+                        >
+                          <Download className="h-4 w-4" />
+                          Export JSON
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          className="cursor-pointer flex items-center gap-2"
+                          onClick={() => hasValidId && handleShareVideo(video.id, video.title)}
+                          disabled={!hasValidId || apiError}
+                        >
+                          <Share2 className="h-4 w-4" />
+                          Share
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          className="text-red-600 hover:!text-red-700 hover:!bg-red-50 cursor-pointer flex items-center gap-2"
+                          onClick={() => setVideoToDelete(video)}
+                          disabled={!hasValidId || apiError}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete Video
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                
+                  <Link
+                    to={annotatorUrl}
+                    className={`aspect-video relative overflow-hidden block ${!hasValidId ? 'pointer-events-none opacity-70' : ''}`}
+                    onClick={(e) => !hasValidId && e.preventDefault()}
+                    aria-disabled={!hasValidId}
+                    tabIndex={!hasValidId ? -1 : undefined}
+                  >
+                    {video.thumbnail_url ? (
+                      <img 
+                        src={video.thumbnail_url} 
+                        alt={video.title} 
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+                    ) : index < 5 ? ( 
+                      <img 
+                        src={getThumbnailUrl(index)} 
+                        alt={video.title} 
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className={`w-full h-full flex items-center justify-center ${getVideoColor(video.title)}`}>
+                        <Film className="h-16 w-16 text-white/90" />
+                      </div>
+                    )}
+                    
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent opacity-80 group-hover:opacity-70 transition-opacity"></div>
+                    
+                    {hasValidId && (
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <div className="bg-white/90 rounded-full p-3 shadow-lg transform group-hover:scale-110 transition-transform">
+                          <Play className="h-8 w-8 text-indigo-600 fill-indigo-600" />
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="absolute top-3 left-3 flex gap-2">
+                       {video.language && (
+                         <Badge className="bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-sm truncate max-w-[100px]" title={video.language}>
+                           {video.language}
+                         </Badge>
+                       )}
+                      <div className="bg-black/70 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1" title={formatDuration(video.duration) === 'N/A' ? 'Duration is not available' : undefined}>
+                        <Clock className="h-3 w-3" />
+                        {formatDuration(video.duration)}
                       </div>
                     </div>
-                  )}
-                  
-                  <div className="absolute top-3 left-3 flex gap-2">
-                     {video.language && (
-                       <Badge className="bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-sm truncate max-w-[100px]" title={video.language}>
-                         {video.language}
-                       </Badge>
-                     )}
-                    <div className="bg-black/70 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1" title={formatDuration(video.duration) === 'N/A' ? 'Duration is not available' : undefined}>
-                      <Clock className="h-3 w-3" />
-                      {formatDuration(video.duration)}
-                    </div>
-                  </div>
-                  
-                  <div className="absolute bottom-0 left-0 right-0 p-4">
-                    <h3 className="font-bold text-white text-lg mb-1 drop-shadow-sm truncate" title={video.title}>
-                      {video.title}
-                    </h3>
-                    <div className="flex items-center gap-2 mb-1 text-xs">
-                      <span className="text-white/80 flex items-center">
-                        <Calendar className="h-3 w-3 mr-1" />
-                        {new Date(video.created_date).toLocaleDateString()}
-                      </span>
-                       {video.author_name && (
-                        <span className="text-white/80 flex items-center truncate" title={`By: ${video.author_name}`}>
-                          <UserCircle className="h-3 w-3 mr-1" /> By: {video.author_name}
+                    
+                    <div className="absolute bottom-0 left-0 right-0 p-4">
+                      <h3 className="font-bold text-white text-lg mb-1 drop-shadow-sm truncate" title={video.title}>
+                        {video.title}
+                      </h3>
+                      <div className="flex items-center gap-2 mb-1 text-xs">
+                        <span className="text-white/80 flex items-center">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          {new Date(video.created_date).toLocaleDateString()}
                         </span>
-                       )}
+                         {video.author_name && (
+                          <span className="text-white/80 flex items-center truncate" title={`By: ${video.author_name}`}>
+                            <UserCircle className="h-3 w-3 mr-1" /> By: {video.author_name}
+                          </span>
+                         )}
+                      </div>
                     </div>
-                  </div>
-                </Link>
-              
-                <div className="p-4 flex flex-col flex-grow">
-                  <p className="text-sm text-gray-600 mb-3 line-clamp-2 flex-grow">
-                    {video.description || 'No description available.'}
-                  </p>
-                  <div className="mt-auto pt-2 border-t border-gray-100">
-                    <Link 
-                      to={annotatorUrl} 
-                      className={`w-full ${!hasValidId ? 'pointer-events-none' : ''}`}
-                      onClick={(e) => !hasValidId && e.preventDefault()}
-                      aria-disabled={!hasValidId}
-                      tabIndex={!hasValidId ? -1 : undefined}
-                    >
-                      <Button 
-                        variant="ghost" 
-                        className="w-full text-indigo-600 hover:bg-indigo-50 justify-center"
-                        disabled={!hasValidId}
+                  </Link>
+                
+                  <div className="p-4 flex flex-col flex-grow">
+                    <p className="text-sm text-gray-600 mb-3 line-clamp-2 flex-grow">
+                      {video.description || 'No description available.'}
+                    </p>
+                    <div className="mt-auto pt-2 border-t border-gray-100">
+                      <Link 
+                        to={annotatorUrl} 
+                        className={`w-full ${!hasValidId ? 'pointer-events-none' : ''}`}
+                        onClick={(e) => !hasValidId && e.preventDefault()}
+                        aria-disabled={!hasValidId}
+                        tabIndex={!hasValidId ? -1 : undefined}
                       >
-                        Annotate <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </Link>
-                    {!hasValidId && (
-                      <p className="text-xs text-red-500 text-center mt-1">Video ID missing, cannot annotate.</p>
-                    )}
+                        <Button 
+                          variant="ghost" 
+                          className="w-full text-indigo-600 hover:bg-indigo-50 justify-center"
+                          disabled={!hasValidId}
+                        >
+                          Annotate <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </Link>
+                      {!hasValidId && (
+                        <p className="text-xs text-red-500 text-center mt-1">Video ID missing, cannot annotate.</p>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )})}
-          </div>
-        )}
+              )})}
+            </div>
+          )}
 
-      <ImportVideoDialog 
-        isOpen={isImportDialogOpen}
-        onClose={() => {
-          setIsImportDialogOpen(false);
-          setVideoToEdit(null); 
-        }}
-        onVideoImport={videoToEdit ? handleEditVideo : handleVideoImport}
-        editVideo={videoToEdit}
-      />
-      
-       <AlertDialog open={!!videoToDelete} onOpenChange={() => setVideoToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure you want to delete this video?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete "{videoToDelete?.title}" and all its annotations. 
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700"
-              onClick={handleDeleteVideo}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        <ImportVideoDialog 
+          isOpen={isImportDialogOpen}
+          onClose={() => {
+            setIsImportDialogOpen(false);
+            setVideoToEdit(null); 
+          }}
+          onVideoImport={videoToEdit ? handleEditVideo : handleVideoImport}
+          editVideo={videoToEdit}
+        />
+        
+         <AlertDialog open={!!videoToDelete} onOpenChange={() => setVideoToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure you want to delete this video?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete "{videoToDelete?.title}" and all its annotations. 
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-red-600 hover:bg-red-700"
+                onClick={handleDeleteVideo}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </>
   );
 }

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -49,7 +48,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { Annotation as AnnotationEntity } from '@/api/entities';
-import { Video as VideoEntity } from '@/api/entities';
+import { videoAPI } from '@/api/awsClient';
 import { formatTime } from '../components/timeUtils';
 import AnnotationDetailDialog from '../components/AnnotationDetailDialog';
 
@@ -87,7 +86,7 @@ export default function SegmentsPage() {
     try {
       let allVideos;
       try {
-        allVideos = await VideoEntity.list();
+        allVideos = await videoAPI.list();
       } catch (error) {
         console.error("Error fetching videos:", error);
         toast({

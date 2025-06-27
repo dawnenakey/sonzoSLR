@@ -13,9 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Upload, AlertCircle, Image, Camera, Paintbrush, Languages, UserCircle, Clock } from 'lucide-react'; // Added Clock
-import { UploadFile } from "@/api/integrations";
-import { GenerateImage } from "@/api/integrations";
-import { User } from '@/api/entities';
 
 export default function ImportVideoDialog({ isOpen, onClose, onVideoImport, editVideo = null }) {
   const [title, setTitle] = useState('');
@@ -49,7 +46,7 @@ export default function ImportVideoDialog({ isOpen, onClose, onVideoImport, edit
     setThumbnailUrl('');
     setGeneratedThumbnailUrl('');
     setLanguage('');
-    // authorName is handled by fetchCurrentUser or editVideo population
+    setAuthorName('');
     setError('');
     if (videoMetadataRef.current) {
         URL.revokeObjectURL(videoMetadataRef.current.src); // Clean up previous object URLs
@@ -59,19 +56,8 @@ export default function ImportVideoDialog({ isOpen, onClose, onVideoImport, edit
   };
 
   useEffect(() => {
-    const fetchCurrentUser = async () => {
-      try {
-        const currentUser = await User.me();
-        if (currentUser && currentUser.full_name && !editVideo) {
-          setAuthorName(currentUser.full_name);
-        }
-      } catch (e) {
-        console.warn("User not logged in or error fetching user data for pre-filling author name.");
-      }
-    };
-    
     if (isOpen) {
-        resetForm(); // Reset form state each time it opens
+        resetForm();
         if (editVideo) {
             setTitle(editVideo.title || '');
             setDescription(editVideo.description || '');
@@ -86,12 +72,9 @@ export default function ImportVideoDialog({ isOpen, onClose, onVideoImport, edit
                  setThumbnailTab('auto');
                  setThumbnailUrl('');
             }
-            // If URL exists in edit mode, try to fetch its duration
             if (editVideo.url) {
                 getVideoDurationFromSource(editVideo.url, 'url');
             }
-        } else {
-            fetchCurrentUser();
         }
     }
   }, [editVideo, isOpen]);
@@ -207,22 +190,14 @@ export default function ImportVideoDialog({ isOpen, onClose, onVideoImport, edit
       let finalThumbnailUrl = thumbnailUrl; 
       
       if (file) { 
-        const uploadResult = await UploadFile({ file });
-        if (uploadResult && uploadResult.file_url) {
-          finalVideoUrl = uploadResult.file_url;
-        } else {
-          throw new Error("Failed to upload video file.");
-        }
+        // TODO: Implement file upload
+        throw new Error("File upload functionality not implemented.");
       }
       
       if (thumbnailTab === "upload") {
         if (thumbnailFile) { 
-          const thumbnailUploadResult = await UploadFile({ file: thumbnailFile });
-          if (thumbnailUploadResult && thumbnailUploadResult.file_url) {
-            finalThumbnailUrl = thumbnailUploadResult.file_url;
-          } else {
-            throw new Error("Failed to upload custom thumbnail.");
-          }
+          // TODO: Implement custom thumbnail upload
+          throw new Error("Custom thumbnail upload functionality not implemented.");
         } else if (editVideo && editVideo.thumbnail_url && thumbnailUrl === editVideo.thumbnail_url) {
             finalThumbnailUrl = editVideo.thumbnail_url;
         }
@@ -259,13 +234,8 @@ export default function ImportVideoDialog({ isOpen, onClose, onVideoImport, edit
     try {
       setIsGeneratingThumbnail(true);
       setError('');
-      const result = await GenerateImage({ prompt: thumbnailPrompt });
-      if (result && result.url) {
-        setGeneratedThumbnailUrl(result.url);
-        setThumbnailUrl(result.url); 
-      } else {
-        throw new Error("Failed to generate thumbnail image.");
-      }
+      // TODO: Implement image generation
+      throw new Error("Image generation functionality not implemented.");
     } catch (err) {
       console.error("Error generating thumbnail:", err);
       setError(`Error generating thumbnail: ${err.message || "Unknown error"}`);

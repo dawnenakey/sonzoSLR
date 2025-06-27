@@ -1,8 +1,6 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { Video as VideoEntity } from '@/api/entities';
 import { Annotation as AnnotationEntity } from '@/api/entities';
 import VideoPlayer from '../components/VideoPlayer';
 import AnnotationTimeline from '../components/AnnotationTimeline';
@@ -36,7 +34,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { AnimatePresence, motion } from "framer-motion";
-
+import Header from '../components/Header';
+import { videoAPI } from '@/api/awsClient';
 
 export default function Annotator() {
   const params = new URLSearchParams(window.location.search);
@@ -96,7 +95,7 @@ export default function Annotator() {
 
       let video = null;
       try {
-        video = await VideoEntity.get(videoId);
+        video = await videoAPI.get(videoId);
       } catch (err) {
         console.error("Error fetching video:", err);
         if (err.message && err.message.includes("No item found with id")) {
@@ -754,168 +753,171 @@ export default function Annotator() {
   );
 
   return (
-    <TooltipProvider>
-      <div className="max-w-7xl mx-auto px-2 sm:px-4">
-         <div className="flex items-center justify-between mb-4 border-b pb-2">
-          <Link to={createPageUrl('Home')} className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 group">
-            <ArrowLeft className="h-3.5 w-3.5 mr-1 transition-transform group-hover:-translate-x-1" />
-            Back
-          </Link>
-          
-          <h1 className="text-lg md:text-xl font-semibold truncate max-w-md mx-2 text-center">
-            {videoData?.title || "Video Annotator"}
-          </h1>
-          
-          <Button 
-            size="sm"
-            variant="outline" 
-            className="flex items-center gap-1"
-            onClick={() => setIsExportDialogOpen(true)}
-          >
-            <Download className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Export</span>
-          </Button>
-        </div>
+    <>
+      <Header />
+      <TooltipProvider>
+        <div className="max-w-7xl mx-auto px-2 sm:px-4">
+           <div className="flex items-center justify-between mb-4 border-b pb-2">
+            <Link to={createPageUrl('Home')} className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 group">
+              <ArrowLeft className="h-3.5 w-3.5 mr-1 transition-transform group-hover:-translate-x-1" />
+              Back
+            </Link>
+            
+            <h1 className="text-lg md:text-xl font-semibold truncate max-w-md mx-2 text-center">
+              {videoData?.title || "Video Annotator"}
+            </h1>
+            
+            <Button 
+              size="sm"
+              variant="outline" 
+              className="flex items-center gap-1"
+              onClick={() => setIsExportDialogOpen(true)}
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Export</span>
+            </Button>
+          </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
-          <div className="lg:col-span-8 space-y-4 sm:space-y-6">
-            <div className="bg-white rounded-xl overflow-hidden shadow-lg">
-              <VideoPlayer 
-                videoUrl={videoData?.url} 
-                videoRef={videoRef}
-                onTimeUpdate={handleTimeUpdate}
-                isPlayingSegment={segmentPlaybackActive}
-                seekStepMode={seekStepMode}
-              >
-                {/* AnnotationControls injected into VideoPlayer */}
-                <AnnotationControls 
-                  isSegmenting={isSegmenting}
-                  onSegmentStart={handleSegmentStart}
-                  currentSegmentDuration={currentSegmentDuration}
-                  onSegmentEnd={handleSegmentEnd}
-                  onCancelSegment={handleCancelSegment}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+            <div className="lg:col-span-8 space-y-4 sm:space-y-6">
+              <div className="bg-white rounded-xl overflow-hidden shadow-lg">
+                <VideoPlayer 
+                  videoUrl={videoData?.url} 
+                  videoRef={videoRef}
+                  onTimeUpdate={handleTimeUpdate}
+                  isPlayingSegment={segmentPlaybackActive}
+                  seekStepMode={seekStepMode}
+                >
+                  {/* AnnotationControls injected into VideoPlayer */}
+                  <AnnotationControls 
+                    isSegmenting={isSegmenting}
+                    onSegmentStart={handleSegmentStart}
+                    currentSegmentDuration={currentSegmentDuration}
+                    onSegmentEnd={handleSegmentEnd}
+                    onCancelSegment={handleCancelSegment}
+                  />
+                </VideoPlayer>
+
+                <AnnotationTimeline 
+                  annotations={annotations}
+                  videoDuration={videoRef.current?.duration ?? videoData?.duration ?? 0}
+                  currentTime={currentTime}
+                  onAnnotationClick={handlePlayAnnotation}
+                  activeSegment={playbackSegment || selectedSegment}
+                  onDeleteAnnotation={handleDeleteAnnotation}
+                  onUpdateAnnotation={handleUpdateAnnotation}
+                  onSeek={handleTimelineSeek}
+                  seekStepMode={seekStepMode}
+                  onSeekStepModeChange={handleSeekStepModeChange}
+                  onPauseVideo={handlePauseVideo}
                 />
-              </VideoPlayer>
+              </div>
+            </div>
+            
+            <div className="lg:col-span-4 space-y-4 sm:space-y-6">
+              <div className="bg-white p-4 sm:p-5 rounded-xl shadow-lg">
+                <h3 className="text-md font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                  <InfoIcon className="h-5 w-5 text-indigo-600" />
+                  Controls & Shortcuts
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="text-xs font-medium text-gray-500 uppercase mb-1.5">Playback</h4>
+                    <ul className="space-y-1">
+                      <ShortcutItem icon={Play} text="Play / Pause" shortcut="Space" />
+                      <ShortcutItem icon={ArrowRight} text="Seek Video" shortcut="← / →" />
+                    </ul>
+                  </div>
 
-              <AnnotationTimeline 
+                  <div>
+                    <h4 className="text-xs font-medium text-gray-500 uppercase mb-1.5">Segmentation</h4>
+                    <ul className="space-y-1">
+                      <ShortcutItem icon={CornerDownLeft} text="New Segment" shortcut="Enter" />
+                      <ShortcutItem icon={XSquare} text="Cancel" shortcut="Esc" />
+                    </ul>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-xs font-medium text-gray-500 uppercase mb-1.5">Edit Actions</h4>
+                    <ul className="space-y-1">
+                      <ShortcutItem 
+                        icon={RotateCcw} 
+                        text="Undo" 
+                        shortcut={isMac ? "⌘ Z" : "Ctrl + Z"} 
+                      />
+                      <ShortcutItem 
+                        icon={RotateCw} 
+                        text="Redo" 
+                        shortcut={isMac ? "⌘ ⇧ Z" : "Ctrl + Shift + Z"} 
+                      />
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h4 className="text-xs font-medium text-gray-500 uppercase mb-1.5">List Menu</h4>
+                     <ul className="space-y-1">
+                      <ShortcutItem icon={FileJson} text="Export JSON" shortcut="•••" />
+                      <ShortcutItem icon={Trash2} text="Delete All" shortcut="•••" />
+                    </ul>
+                  </div>
+                </div>
+                 <p className="text-xs text-gray-500 mt-4 pt-2 border-t border-gray-200">
+                  Annotations save automatically. Edit by clicking on timeline or list items.
+                </p>
+              </div>
+            </div>
+
+            <div className="lg:col-span-12 mt-0 sm:mt-0"> 
+              <AnnotationList 
                 annotations={annotations}
-                videoDuration={videoRef.current?.duration ?? videoData?.duration ?? 0}
-                currentTime={currentTime}
-                onAnnotationClick={handlePlayAnnotation}
-                activeSegment={playbackSegment || selectedSegment}
+                onEditAnnotation={handleEditAnnotation}
                 onDeleteAnnotation={handleDeleteAnnotation}
-                onUpdateAnnotation={handleUpdateAnnotation}
-                onSeek={handleTimelineSeek}
-                seekStepMode={seekStepMode}
-                onSeekStepModeChange={handleSeekStepModeChange}
-                onPauseVideo={handlePauseVideo}
+                onAnnotationClick={handleAnnotationClick}
+                activeSegment={segmentPlaybackActive ? playbackSegment : selectedSegment}
+                onTriggerExportJson={() => setIsExportDialogOpen(true)}
+                onTriggerDeleteAll={() => setIsDeletingAll(true)}
               />
             </div>
           </div>
-          
-          <div className="lg:col-span-4 space-y-4 sm:space-y-6">
-            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-lg">
-              <h3 className="text-md font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                <InfoIcon className="h-5 w-5 text-indigo-600" />
-                Controls & Shortcuts
-              </h3>
-              <div className="space-y-3">
-                <div>
-                  <h4 className="text-xs font-medium text-gray-500 uppercase mb-1.5">Playback</h4>
-                  <ul className="space-y-1">
-                    <ShortcutItem icon={Play} text="Play / Pause" shortcut="Space" />
-                    <ShortcutItem icon={ArrowRight} text="Seek Video" shortcut="← / →" />
-                  </ul>
-                </div>
 
-                <div>
-                  <h4 className="text-xs font-medium text-gray-500 uppercase mb-1.5">Segmentation</h4>
-                  <ul className="space-y-1">
-                    <ShortcutItem icon={CornerDownLeft} text="New Segment" shortcut="Enter" />
-                    <ShortcutItem icon={XSquare} text="Cancel" shortcut="Esc" />
-                  </ul>
-                </div>
-                
-                <div>
-                  <h4 className="text-xs font-medium text-gray-500 uppercase mb-1.5">Edit Actions</h4>
-                  <ul className="space-y-1">
-                    <ShortcutItem 
-                      icon={RotateCcw} 
-                      text="Undo" 
-                      shortcut={isMac ? "⌘ Z" : "Ctrl + Z"} 
-                    />
-                    <ShortcutItem 
-                      icon={RotateCw} 
-                      text="Redo" 
-                      shortcut={isMac ? "⌘ ⇧ Z" : "Ctrl + Shift + Z"} 
-                    />
-                  </ul>
-                </div>
+          <AnnotationDetailDialog 
+            isOpen={isDetailDialogOpen}
+            onClose={() => {setSelectedSegment(null); setIsDetailDialogOpen(false);}}
+            annotation={selectedSegment}
+            onSave={handleUpdateAnnotation}
+            videoDuration={videoRef.current?.duration ?? videoData?.duration ?? 0}
+            videoUrl={videoData?.url}
+          />
 
-                <div>
-                  <h4 className="text-xs font-medium text-gray-500 uppercase mb-1.5">List Menu</h4>
-                   <ul className="space-y-1">
-                    <ShortcutItem icon={FileJson} text="Export JSON" shortcut="•••" />
-                    <ShortcutItem icon={Trash2} text="Delete All" shortcut="•••" />
-                  </ul>
-                </div>
-              </div>
-               <p className="text-xs text-gray-500 mt-4 pt-2 border-t border-gray-200">
-                Annotations save automatically. Edit by clicking on timeline or list items.
-              </p>
-            </div>
-          </div>
+          <ExportJsonDialog 
+            isOpen={isExportDialogOpen}
+            onClose={() => setIsExportDialogOpen(false)}
+            annotations={annotations}
+            videoTitle={videoData?.title || "video"}
+          />
+          <AlertDialog open={isDeletingAll} onOpenChange={setIsDeletingAll}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete All Annotations?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete all {annotations.length} annotations for "{videoData?.title}"? 
+                  This action can be undone locally using {isMac ? "⌘ Z" : "Ctrl + Z"} immediately after.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setIsDeletingAll(false)}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-red-600 hover:bg-red-700"
+                  onClick={handleDeleteAllAnnotations}
+                >
+                  Delete All
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
-          <div className="lg:col-span-12 mt-0 sm:mt-0"> 
-            <AnnotationList 
-              annotations={annotations}
-              onEditAnnotation={handleEditAnnotation}
-              onDeleteAnnotation={handleDeleteAnnotation}
-              onAnnotationClick={handleAnnotationClick}
-              activeSegment={segmentPlaybackActive ? playbackSegment : selectedSegment}
-              onTriggerExportJson={() => setIsExportDialogOpen(true)}
-              onTriggerDeleteAll={() => setIsDeletingAll(true)}
-            />
-          </div>
         </div>
-
-        <AnnotationDetailDialog 
-          isOpen={isDetailDialogOpen}
-          onClose={() => {setSelectedSegment(null); setIsDetailDialogOpen(false);}}
-          annotation={selectedSegment}
-          onSave={handleUpdateAnnotation}
-          videoDuration={videoRef.current?.duration ?? videoData?.duration ?? 0}
-          videoUrl={videoData?.url}
-        />
-
-        <ExportJsonDialog 
-          isOpen={isExportDialogOpen}
-          onClose={() => setIsExportDialogOpen(false)}
-          annotations={annotations}
-          videoTitle={videoData?.title || "video"}
-        />
-        <AlertDialog open={isDeletingAll} onOpenChange={setIsDeletingAll}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete All Annotations?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete all {annotations.length} annotations for "{videoData?.title}"? 
-                This action can be undone locally using {isMac ? "⌘ Z" : "Ctrl + Z"} immediately after.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setIsDeletingAll(false)}>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-red-600 hover:bg-red-700"
-                onClick={handleDeleteAllAnnotations}
-              >
-                Delete All
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-      </div>
-    </TooltipProvider>
+      </TooltipProvider>
+    </>
   );
 }
