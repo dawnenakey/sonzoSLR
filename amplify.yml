@@ -12,8 +12,10 @@ frontend:
         - cd frontend || { echo "frontend directory not found"; exit 1; }
         - 'echo "Frontend directory contents:"'
         - ls -la
+        - 'echo "Cleaning previous installation to fix Rollup dependency issues..."'
+        - rm -rf node_modules package-lock.json || true
         - 'echo "Installing dependencies..."'
-        - npm ci --include=dev || npm install --include=dev  # Install all dependencies including dev dependencies
+        - npm install --include=dev --platform=linux --arch=x64
         - 'echo "Dependencies installed. Checking if vite is available:"'
         - npx vite --version || { echo "Vite not found after installation"; exit 1; }
     build:
