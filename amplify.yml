@@ -10,13 +10,12 @@ frontend:
         - cd frontend || { echo "frontend directory not found"; exit 1; }
         - 'echo "Frontend directory contents:"'
         - ls -la
-        - npm install --production=false
+        - npm install --omit=dev
     build:
       commands:
         - 'echo "Building frontend..."'
         - 'echo "Environment variables:"'
         - 'echo "NODE_ENV: $NODE_ENV"'
-        - 'echo "VITE_BASE44_API_KEY: ${VITE_BASE44_API_KEY:+SET}"'
         - 'echo "VITE_DATA_COLLECTION_API: ${VITE_DATA_COLLECTION_API:+SET}"'
         - npm run build
         - 'echo "Build completed. Contents of dist:"'
