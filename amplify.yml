@@ -10,7 +10,7 @@ frontend:
         - cd frontend || { echo "frontend directory not found"; exit 1; }
         - 'echo "Frontend directory contents:"'
         - ls -la
-        - npm install  # Ensure this is npm install, not --omit=dev
+        - npm install  # Must be npm install, not --omit=dev
     build:
       commands:
         - 'echo "Building frontend..."'
