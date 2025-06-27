@@ -6,27 +6,30 @@ frontend:
         - nvm install 20
         - nvm use 20
         - node -v || { echo "Node.js installation failed"; exit 1; }
+        - npm -v || { echo "npm installation failed"; exit 1; }
         - 'echo "Current directory: $(pwd)"'
         - ls -la
         - cd frontend || { echo "frontend directory not found"; exit 1; }
         - 'echo "Frontend directory contents:"'
         - ls -la
-        - cd src || { echo "src directory not found"; exit 1; }  # Change to src directory
-        - npm install  # Install dependencies in src
+        - 'echo "Installing dependencies..."'
+        - npm ci --include=dev || npm install --include=dev  # Install all dependencies including dev dependencies
+        - 'echo "Dependencies installed. Checking if vite is available:"'
+        - npx vite --version || { echo "Vite not found after installation"; exit 1; }
     build:
       commands:
         - 'echo "Building frontend..."'
         - 'echo "Environment variables:"'
         - 'echo "NODE_ENV: $NODE_ENV"'
         - 'echo "VITE_DATA_COLLECTION_API: ${VITE_DATA_COLLECTION_API:+SET}"'
-        - npm run build  # Run build from src
+        - npm run build  # Run build from frontend
         - 'echo "Build completed. Contents of dist:"'
         - ls -la dist/
   artifacts:
-    baseDirectory: frontend/dist  # Adjust if dist is output in src/dist
+    baseDirectory: frontend/dist  # Output should be in frontend/dist
     files:
       - '**/*'
   cache:
     paths:
-      - frontend/src/node_modules/**/*
+      - frontend/node_modules/**/*
       - frontend/.npm-cache/**/*
