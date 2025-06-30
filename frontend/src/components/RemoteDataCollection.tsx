@@ -1,3 +1,5 @@
+/// <reference types="vite/client" />
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -39,7 +41,7 @@ const RemoteDataCollection: React.FC = () => {
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
 
-  const API_BASE_URL = process.env.VITE_DATA_COLLECTION_API || 'https://qt8f7grhb5.execute-api.us-east-1.amazonaws.com/prod';
+  const API_BASE_URL = import.meta.env.VITE_DATA_COLLECTION_API || 'https://qt8f7grhb5.execute-api.us-east-1.amazonaws.com/prod';
 
   useEffect(() => {
     // Load user sessions on component mount
