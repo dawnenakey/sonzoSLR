@@ -23,7 +23,7 @@ frontend:
         - 'echo "Building frontend..."'
         - 'echo "Environment variables:"'
         - 'echo "NODE_ENV: $NODE_ENV"'
-        - 'echo "VITE_DATA_COLLECTION_API: ${VITE_DATA_COLLECTION_API:+SET}"'
+        - 'echo "VITE_DATA_COLLECTION_API: $VITE_DATA_COLLECTION_API"'
         - npm run build  # Run build from frontend
         - 'echo "Build completed. Contents of dist:"'
         - ls -la dist/
