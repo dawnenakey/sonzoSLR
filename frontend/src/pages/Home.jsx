@@ -332,20 +332,6 @@ export default function Home() {
             // For now, user will fill in details in the dialog after upload
           }} />
         </section>
-        {apiError && (
-          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
-            <div className="text-amber-500 shrink-0 mt-0.5">
-              <AlertCircle className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="font-medium text-amber-800">Connection Issue</h3>
-              <p className="text-amber-700 text-sm mt-1">
-                We're having trouble connecting to the server. You're viewing sample videos in demo mode.
-                Your changes won't be saved permanently. Try refreshing the page.
-              </p>
-            </div>
-          </div>
-        )}
         
         <section>
           <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
