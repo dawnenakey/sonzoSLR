@@ -30,29 +30,6 @@ import Header from '../components/Header';
 import LiveCameraAnnotator from '../components/LiveCameraAnnotator';
 import { videoAPI } from '@/api/awsClient';
 
-const FALLBACK_VIDEOS = [
-  {
-    id: "fallback-1",
-    title: "Introduction to Sign Language",
-    description: "A basic introduction to American Sign Language with common expressions and greetings.",
-    url: "https://assets.mixkit.co/videos/preview/mixkit-young-woman-talking-in-sign-language-8637-large.mp4",
-    duration: 120,
-    created_date: new Date().toISOString(),
-    language: "ASL",
-    author_name: "Demo User"
-  },
-  {
-    id: "fallback-2",
-    title: "Everyday Signing Vocabulary",
-    description: "Learn vocabulary for everyday objects and actions in sign language.",
-    url: "https://assets.mixkit.co/videos/preview/mixkit-girl-in-neon-sign-1232-large.mp4", 
-    duration: 180,
-    created_date: new Date().toISOString(),
-    language: "BSL",
-    author_name: "Demo User"
-  }
-];
-
 export default function Home() {
   const [videos, setVideos] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -81,7 +58,7 @@ export default function Home() {
         setVideos(fetchedVideos);
       } else {
         console.error('Fetched videos is not an array:', fetchedVideos);
-        setVideos(FALLBACK_VIDEOS);
+        setVideos([]);
         setApiError(true);
         toast({
             variant: "destructive",
@@ -112,7 +89,7 @@ export default function Home() {
       }
     } catch (error) {
       console.error('Error fetching videos or annotations:', error);
-      setVideos(FALLBACK_VIDEOS);
+      setVideos([]);
       setAnnotationsMap({});
       setApiError(true);
       toast({
@@ -399,8 +376,17 @@ export default function Home() {
             </div>
           ) : videos.length === 0 ? (
             <div className="bg-white rounded-xl p-6 sm:p-8 text-center border-2 border-dashed border-gray-200">
-              <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <Film className="h-8 w-8 text-gray-400" />
+              {/* ASL Welcome Video */}
+              <div className="mx-auto w-64 h-36 mb-4">
+                <video
+                  src="/welcome-asl.mov"
+                  className="w-full h-full rounded-lg shadow"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  aria-label="Welcome message in ASL"
+                />
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">No videos yet</h3>
               <p className="text-gray-500 mb-6 max-w-md mx-auto">
