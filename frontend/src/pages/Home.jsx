@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { Film, Plus, ArrowRight, Play, Calendar, Clock, Trash2, MoreVertical, Edit2, AlertCircle, UserCircle, Download, Share2 } from 'lucide-react'; // Removed Copy as it wasn't used in the last provided version
+import { Film, Plus, ArrowRight, Play, Calendar, Clock, Trash2, MoreVertical, Edit2, AlertCircle, UserCircle, Download, Share2, Camera } from 'lucide-react'; // Removed Copy as it wasn't used in the last provided version
 import { Button } from '@/components/ui/button';
 import { Annotation as AnnotationEntity } from '@/api/entities';
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatTime } from '../components/timeUtils';
 import Header from '../components/Header';
 import LiveCameraAnnotator from '../components/LiveCameraAnnotator';
+import CameraSelector from '../components/CameraSelector';
 import { videoAPI } from '@/api/awsClient';
 
 export default function Home() {
@@ -40,6 +41,12 @@ export default function Home() {
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
   const [annotationsMap, setAnnotationsMap] = useState({});
+  const [selectedCamera, setSelectedCamera] = useState(null);
+  const [cameraSettings, setCameraSettings] = useState({
+    resolution: '1920x1080',
+    frameRate: 60,
+    quality: 'high'
+  });
 
   useEffect(() => {
     fetchVideosAndAnnotations();
@@ -322,15 +329,36 @@ export default function Home() {
     <>
       <Header />
       <div className="max-w-7xl mx-auto p-4 sm:p-6">
-        {/* Live Camera Annotator Section */}
-        <section className="mb-8">
-          <h2 className="text-xl font-semibold mb-2">Record from Live Camera (Brio/Oak)</h2>
-          <LiveCameraAnnotator onVideoUploaded={async (file) => {
-            // Simulate ImportVideoDialog's upload flow: open dialog with file pre-selected
-            setIsImportDialogOpen(true);
-            // Optionally, you could auto-fill ImportVideoDialog with the file, or handle upload directly here
-            // For now, user will fill in details in the dialog after upload
-          }} />
+        {/* Camera Selection Section */}
+        <section className="mb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-1">
+              <CameraSelector 
+                onCameraSelect={setSelectedCamera}
+                onSettingsChange={setCameraSettings}
+                showSettings={true}
+              />
+            </div>
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <Camera className="h-5 w-5 text-blue-600" />
+                  Live Camera Recording
+                  {selectedCamera?.isBRIO && (
+                    <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium">
+                      BRIO Optimized
+                    </span>
+                  )}
+                </h2>
+                <LiveCameraAnnotator onVideoUploaded={async (file) => {
+                  // Simulate ImportVideoDialog's upload flow: open dialog with file pre-selected
+                  setIsImportDialogOpen(true);
+                  // Optionally, you could auto-fill ImportVideoDialog with the file, or handle upload directly here
+                  // For now, user will fill in details in the dialog after upload
+                }} />
+              </div>
+            </div>
+          </div>
         </section>
         
         <section>

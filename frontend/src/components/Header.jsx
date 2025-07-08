@@ -4,6 +4,7 @@ import logo from '../logo.svg';
 
 const navLinks = [
   { name: 'Home', to: '/Home' },
+  { name: 'Camera Settings', to: '/CameraSettings' },
   { name: 'Segments', to: '/Segments' },
   { name: 'About', to: '/About' },
 ];
