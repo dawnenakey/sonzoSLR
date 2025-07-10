@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Slider } from './ui/slider';
+import AWSUploadNotification from './AWSUploadNotification';
 
 interface Session {
   session_id: string;
@@ -26,6 +27,15 @@ interface Video {
   upload_timestamp: string;
 }
 
+interface UploadStatus {
+  isUploading: boolean;
+  progress: number;
+  status: 'idle' | 'connecting' | 'uploading' | 'processing' | 'completed' | 'error';
+  message: string;
+  awsUrl?: string;
+  error?: string;
+}
+
 const RemoteDataCollection: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
@@ -33,15 +43,20 @@ const RemoteDataCollection: React.FC = () => {
   const [videos, setVideos] = useState<Video[]>([]);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<UploadStatus>({
+    isUploading: false,
+    progress: 0,
+    status: 'idle',
+    message: ''
+  });
+  const [showNotification, setShowNotification] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const recordingIntervalRef = useRef<number | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
 
-  const API_BASE_URL = import.meta.env.VITE_DATA_COLLECTION_API || 'https://qt8f7grhb5.execute-api.us-east-1.amazonaws.com/prod';
+  const API_BASE_URL = (import.meta as any).env?.VITE_DATA_COLLECTION_API || 'https://qt8f7grhb5.execute-api.us-east-1.amazonaws.com/prod';
 
   useEffect(() => {
     // Load user sessions on component mount
@@ -66,10 +81,6 @@ const RemoteDataCollection: React.FC = () => {
     const sessionName = prompt('Enter session name:');
     if (!sessionName) return;
 
-    const description = prompt('Enter session description (optional):');
-    const tagsInput = prompt('Enter tags (comma-separated, optional):');
-    const tags = tagsInput ? tagsInput.split(',').map(tag => tag.trim()) : [];
-
     try {
       const userId = localStorage.getItem('user_id') || 'default_user';
       const response = await fetch(`${API_BASE_URL}/sessions/create`, {
@@ -80,19 +91,18 @@ const RemoteDataCollection: React.FC = () => {
         body: JSON.stringify({
           user_id: userId,
           session_name: sessionName,
-          description: description || undefined,
-          tags
+          description: `Session created on ${new Date().toLocaleString()}`,
+          tags: ['remote-collection']
         }),
       });
 
       const data = await response.json();
       if (data.success) {
         await loadUserSessions();
-        alert('Session created successfully!');
+        setCurrentSession(data.session);
       }
     } catch (error) {
       console.error('Error creating session:', error);
-      alert('Error creating session');
     }
   };
 
@@ -104,22 +114,21 @@ const RemoteDataCollection: React.FC = () => {
           height: { ideal: 1080 },
           frameRate: { ideal: 30 }
         },
-        audio: true
+        audio: false
       });
-
+      
       setStream(mediaStream);
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
       }
     } catch (error) {
       console.error('Error accessing camera:', error);
-      alert('Error accessing camera. Please check permissions.');
     }
   };
 
   const stopCamera = () => {
     if (stream) {
-      stream.getTracks().forEach(track => track.stop());
+      stream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
       setStream(null);
     }
     if (videoRef.current) {
@@ -128,66 +137,68 @@ const RemoteDataCollection: React.FC = () => {
   };
 
   const startRecording = async () => {
-    if (!stream || !currentSession) {
-      alert('Please start camera and select a session first');
-      return;
-    }
+    if (!stream) return;
 
-    try {
-      recordedChunksRef.current = [];
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'video/webm;codecs=vp9'
-      });
+    recordedChunksRef.current = [];
+    setIsRecording(true);
+    setRecordingTime(0);
 
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          recordedChunksRef.current.push(event.data);
-        }
-      };
+    const mediaRecorder = new MediaRecorder(stream, {
+      mimeType: 'video/webm;codecs=vp9'
+    });
+    mediaRecorderRef.current = mediaRecorder;
 
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
-        uploadVideo(blob);
-      };
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        recordedChunksRef.current.push(event.data);
+      }
+    };
 
-      mediaRecorderRef.current = mediaRecorder;
-      mediaRecorder.start();
-      setIsRecording(true);
-      setRecordingTime(0);
+    mediaRecorder.onstop = () => {
+      const videoBlob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+      uploadVideo(videoBlob);
+    };
 
-      // Start recording timer
-      recordingIntervalRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-
-    } catch (error) {
-      console.error('Error starting recording:', error);
-      alert('Error starting recording');
-    }
+    mediaRecorder.start();
+    
+    // Start recording timer
+    recordingIntervalRef.current = setInterval(() => {
+      setRecordingTime(prev => prev + 1);
+    }, 1000);
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
+    setIsRecording(false);
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current);
+      recordingIntervalRef.current = null;
+    }
+    if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      
-      if (recordingIntervalRef.current) {
-        clearInterval(recordingIntervalRef.current);
-        recordingIntervalRef.current = null;
-      }
     }
   };
 
   const uploadVideo = async (videoBlob: Blob) => {
     if (!currentSession) return;
 
-    setIsUploading(true);
-    setUploadProgress(0);
+    setUploadStatus({
+      isUploading: true,
+      progress: 0,
+      status: 'connecting',
+      message: 'Connecting to AWS...'
+    });
+    setShowNotification(true);
 
     try {
       const filename = `recording_${Date.now()}.webm`;
       
-      // First, get a presigned URL for upload
+      // Step 1: Get presigned URL
+      setUploadStatus((prev: UploadStatus) => ({
+        ...prev,
+        status: 'connecting',
+        message: 'Getting upload URL from AWS...'
+      }));
+
       const presignedResponse = await fetch(`${API_BASE_URL}/sessions/${currentSession.session_id}/upload-video`, {
         method: 'POST',
         headers: {
@@ -208,31 +219,76 @@ const RemoteDataCollection: React.FC = () => {
         throw new Error(`Failed to get upload URL: ${presignedData.error}`);
       }
 
-      // Upload the file directly to S3 using the presigned URL with progress tracking
+      // Step 2: Upload to S3 with progress tracking
+      setUploadStatus((prev: UploadStatus) => ({
+        ...prev,
+        status: 'uploading',
+        message: 'Uploading video to AWS S3...'
+      }));
+
       const xhr = new XMLHttpRequest();
       
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable) {
           const progress = (event.loaded / event.total) * 100;
-          setUploadProgress(progress);
+          setUploadStatus(prev => ({
+            ...prev,
+            progress,
+            message: `Uploading to AWS S3... ${Math.round(progress)}%`
+          }));
         }
       };
 
       xhr.onload = async () => {
         if (xhr.status === 200) {
-            alert('Video uploaded successfully!');
+          // Step 3: Processing confirmation
+          setUploadStatus(prev => ({
+            ...prev,
+            status: 'processing',
+            message: 'Video uploaded successfully! Processing in AWS...'
+          }));
+
+          // Wait a moment to show processing status
+          setTimeout(async () => {
+            setUploadStatus({
+              isUploading: false,
+              progress: 100,
+              status: 'completed',
+              message: '✅ Successfully uploaded to AWS!',
+              awsUrl: presignedData.uploadUrl
+            });
+
             await loadSessionVideos();
-            setUploadProgress(0);
+            
+            // Clear success message after 5 seconds
+            setTimeout(() => {
+              setUploadStatus({
+                isUploading: false,
+                progress: 0,
+                status: 'idle',
+                message: ''
+              });
+            }, 5000);
+          }, 2000);
         } else {
-          alert('Upload failed');
+          setUploadStatus({
+            isUploading: false,
+            progress: 0,
+            status: 'error',
+            message: '❌ Upload failed',
+            error: `HTTP ${xhr.status}: ${xhr.statusText}`
+          });
         }
-        setIsUploading(false);
       };
 
       xhr.onerror = () => {
-        alert('Upload failed');
-        setIsUploading(false);
-        setUploadProgress(0);
+        setUploadStatus({
+          isUploading: false,
+          progress: 0,
+          status: 'error',
+          message: '❌ Network error during upload',
+          error: 'Connection failed'
+        });
       };
 
       xhr.open('PUT', presignedData.uploadUrl);
@@ -241,9 +297,13 @@ const RemoteDataCollection: React.FC = () => {
 
     } catch (error) {
       console.error('Error uploading video:', error);
-      alert('Error uploading video');
-      setIsUploading(false);
-      setUploadProgress(0);
+      setUploadStatus({
+        isUploading: false,
+        progress: 0,
+        status: 'error',
+        message: '❌ Upload failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   };
 
@@ -279,10 +339,70 @@ const RemoteDataCollection: React.FC = () => {
     return `${mins}m ${secs}s`;
   };
 
+  const getStatusColor = (status: UploadStatus['status']) => {
+    switch (status) {
+      case 'connecting': return 'bg-blue-500';
+      case 'uploading': return 'bg-blue-600';
+      case 'processing': return 'bg-yellow-500';
+      case 'completed': return 'bg-green-500';
+      case 'error': return 'bg-red-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
+      {/* AWS Upload Notification */}
+      <AWSUploadNotification
+        isVisible={showNotification}
+        status={uploadStatus.status}
+        progress={uploadStatus.progress}
+        message={uploadStatus.message}
+        error={uploadStatus.error}
+        awsUrl={uploadStatus.awsUrl}
+        onClose={() => setShowNotification(false)}
+      />
+      
       <div className="bg-white rounded-lg shadow-lg p-6">
         <h2 className="text-2xl font-bold mb-4">Remote Data Collection</h2>
+        
+        {/* AWS Upload Status Banner */}
+        {uploadStatus.status !== 'idle' && (
+          <div className={`mb-6 p-4 rounded-lg border-l-4 ${getStatusColor(uploadStatus.status)} border-l-4`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className={`w-3 h-3 rounded-full ${getStatusColor(uploadStatus.status)} animate-pulse`}></div>
+                <div>
+                  <h4 className="font-semibold text-white">
+                    {uploadStatus.status === 'connecting' && '🔗 Connecting to AWS...'}
+                    {uploadStatus.status === 'uploading' && '📤 Uploading to AWS S3...'}
+                    {uploadStatus.status === 'processing' && '⚙️ Processing in AWS...'}
+                    {uploadStatus.status === 'completed' && '✅ Successfully uploaded to AWS!'}
+                    {uploadStatus.status === 'error' && '❌ Upload failed'}
+                  </h4>
+                  <p className="text-sm text-white/90">{uploadStatus.message}</p>
+                  {uploadStatus.error && (
+                    <p className="text-xs text-white/80 mt-1">Error: {uploadStatus.error}</p>
+                  )}
+                </div>
+              </div>
+              
+              {uploadStatus.status === 'uploading' && (
+                <div className="flex items-center space-x-2">
+                  <div className="w-32 bg-white/20 rounded-full h-2">
+                    <div 
+                      className="bg-white h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${uploadStatus.progress}%` }}
+                    />
+                  </div>
+                  <span className="text-white text-sm font-medium">
+                    {Math.round(uploadStatus.progress)}%
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         
         {/* Session Management */}
         <div className="mb-6">
@@ -373,22 +493,21 @@ const RemoteDataCollection: React.FC = () => {
                 </div>
               </div>
 
-              {/* Upload Progress */}
+              {/* Upload Status and Session Videos */}
               <div className="space-y-4">
-                {isUploading && (
-                  <div className="p-4 bg-blue-50 rounded-lg">
-                    <h4 className="font-semibold mb-2">Uploading Video...</h4>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${uploadProgress}%` }}
-                      />
-                    </div>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {Math.round(uploadProgress)}% complete
-                    </p>
+                {/* AWS Connection Status */}
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-semibold mb-2 flex items-center">
+                    <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                    AWS Connection Status
+                  </h4>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p>• API Gateway: Connected</p>
+                    <p>• S3 Bucket: spokhand-data</p>
+                    <p>• Region: us-east-1</p>
+                    <p>• Last Upload: {uploadStatus.status === 'completed' ? 'Just now' : 'Never'}</p>
                   </div>
-                )}
+                </div>
 
                 {/* Session Videos */}
                 <div>

@@ -1,3 +1,10 @@
+# IMPORTANT: To fix 404 errors on client-side routes (e.g., /about), add the following rewrite rule in the AWS Amplify Console under "Rewrites and redirects":
+#
+# Source address:  /<*>
+# Target address:  /index.html
+# Type:            200 (Rewrite)
+#
+# This ensures all routes are served by index.html for SPA routing.
 version: 1
 frontend:
   phases:
