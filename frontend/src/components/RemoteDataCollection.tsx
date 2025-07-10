@@ -478,19 +478,58 @@ const RemoteDataCollection: React.FC = () => {
                       Stop Camera
                     </Button>
                   )}
-                  
                   {stream && !isRecording && (
                     <Button onClick={startRecording} className="bg-red-600 hover:bg-red-700">
                       Start Recording
                     </Button>
                   )}
-                  
                   {isRecording && (
                     <Button onClick={stopRecording} className="bg-red-600 hover:bg-red-700">
                       Stop Recording
                     </Button>
                   )}
                 </div>
+
+                {/* Info box, tooltip, and Download button for recorded video */}
+                {recordedChunksRef.current.length > 0 && !isRecording && (
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-900 relative">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="font-semibold">Recorded video ready to upload</span>
+                      <span className="text-xs text-blue-700">({(recordedChunksRef.current.reduce((acc, c) => acc + c.size, 0) / 1024 / 1024).toFixed(2)} MB)</span>
+                      <span className="ml-2 cursor-pointer" title="The video is currently stored in your browser. Click 'Upload Video' to send it to AWS and add it to your library, or 'Download' to save a local copy before uploading.">ℹ️</span>
+                    </div>
+                    <ul className="list-disc pl-5 mb-2">
+                      <li>The video is stored in your browser until you upload or download it.</li>
+                      <li>Click <b>Upload Video</b> to send it to AWS and add it to your library.</li>
+                      <li>Click <b>Download</b> to save a copy to your computer before uploading.</li>
+                    </ul>
+                    <div className="flex gap-2">
+                      <Button
+                        className="bg-indigo-600 hover:bg-indigo-700"
+                        onClick={() => uploadVideo(new Blob(recordedChunksRef.current, { type: 'video/webm' }))}
+                        disabled={uploadStatus.isUploading}
+                      >
+                        {uploadStatus.isUploading ? 'Uploading...' : 'Upload Video'}
+                      </Button>
+                      <Button
+                        className="bg-gray-200 hover:bg-gray-300 text-gray-800"
+                        onClick={() => {
+                          const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `recorded-video-${Date.now()}.webm`;
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                          URL.revokeObjectURL(url);
+                        }}
+                      >
+                        Download
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Upload Status and Session Videos */}
@@ -513,7 +552,22 @@ const RemoteDataCollection: React.FC = () => {
                 <div>
                   <h4 className="font-semibold mb-2">Session Videos</h4>
                   <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {videos.map((video) => (
+                    {/* Pending Approval Section (UI only for now) */}
+                    {videos.filter(video => video.processing_status === 'pending').length > 0 && (
+                      <div className="mb-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                        <span className="font-semibold text-yellow-800">Pending Approval</span>
+                        <ul className="mt-1 space-y-1">
+                          {videos.filter(video => video.processing_status === 'pending').map((video) => (
+                            <li key={video.video_id} className="flex justify-between items-center text-yellow-900 text-sm">
+                              <span>{video.filename}</span>
+                              <span className="italic">Pending</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {/* Approved/Other Videos */}
+                    {videos.filter(video => video.processing_status !== 'pending').map((video) => (
                       <div key={video.video_id} className="p-3 bg-gray-50 rounded-lg">
                         <div className="flex justify-between items-start">
                           <div>
