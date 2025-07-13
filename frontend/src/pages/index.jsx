@@ -10,6 +10,8 @@ import Lexicon from "./Lexicon";
 
 import Segments from "./Segments";
 
+import CameraSettings from "./CameraSettings";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -23,6 +25,8 @@ const PAGES = {
     Lexicon: Lexicon,
     
     Segments: Segments,
+    
+    CameraSettings: CameraSettings,
     
 }
 
@@ -60,6 +64,8 @@ function PagesContent() {
                 <Route path="/Lexicon" element={<Lexicon />} />
                 
                 <Route path="/Segments" element={<Segments />} />
+                
+                <Route path="/CameraSettings" element={<CameraSettings />} />
                 
             </Routes>
         </Layout>

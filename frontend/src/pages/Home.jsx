@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { Film, Plus, ArrowRight, Play, Calendar, Clock, Trash2, MoreVertical, Edit2, AlertCircle, UserCircle, Download, Share2 } from 'lucide-react'; // Removed Copy as it wasn't used in the last provided version
+import { Film, Plus, ArrowRight, Play, Calendar, Clock, Trash2, MoreVertical, Edit2, AlertCircle, UserCircle, Download, Share2, Camera } from 'lucide-react'; // Removed Copy as it wasn't used in the last provided version
 import { Button } from '@/components/ui/button';
 import { Annotation as AnnotationEntity } from '@/api/entities';
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,30 +28,8 @@ import { Badge } from "@/components/ui/badge";
 import { formatTime } from '../components/timeUtils';
 import Header from '../components/Header';
 import LiveCameraAnnotator from '../components/LiveCameraAnnotator';
+import CameraSelector from '../components/CameraSelector';
 import { videoAPI } from '@/api/awsClient';
-
-const FALLBACK_VIDEOS = [
-  {
-    id: "fallback-1",
-    title: "Introduction to Sign Language",
-    description: "A basic introduction to American Sign Language with common expressions and greetings.",
-    url: "https://assets.mixkit.co/videos/preview/mixkit-young-woman-talking-in-sign-language-8637-large.mp4",
-    duration: 120,
-    created_date: new Date().toISOString(),
-    language: "ASL",
-    author_name: "Demo User"
-  },
-  {
-    id: "fallback-2",
-    title: "Everyday Signing Vocabulary",
-    description: "Learn vocabulary for everyday objects and actions in sign language.",
-    url: "https://assets.mixkit.co/videos/preview/mixkit-girl-in-neon-sign-1232-large.mp4", 
-    duration: 180,
-    created_date: new Date().toISOString(),
-    language: "BSL",
-    author_name: "Demo User"
-  }
-];
 
 export default function Home() {
   const [videos, setVideos] = useState([]);
@@ -63,6 +41,12 @@ export default function Home() {
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
   const [annotationsMap, setAnnotationsMap] = useState({});
+  const [selectedCamera, setSelectedCamera] = useState(null);
+  const [cameraSettings, setCameraSettings] = useState({
+    resolution: '1920x1080',
+    frameRate: 60,
+    quality: 'high'
+  });
 
   useEffect(() => {
     fetchVideosAndAnnotations();
@@ -81,7 +65,7 @@ export default function Home() {
         setVideos(fetchedVideos);
       } else {
         console.error('Fetched videos is not an array:', fetchedVideos);
-        setVideos(FALLBACK_VIDEOS);
+        setVideos([]);
         setApiError(true);
         toast({
             variant: "destructive",
@@ -112,7 +96,7 @@ export default function Home() {
       }
     } catch (error) {
       console.error('Error fetching videos or annotations:', error);
-      setVideos(FALLBACK_VIDEOS);
+      setVideos([]);
       setAnnotationsMap({});
       setApiError(true);
       toast({
@@ -345,30 +329,37 @@ export default function Home() {
     <>
       <Header />
       <div className="max-w-7xl mx-auto p-4 sm:p-6">
-        {/* Live Camera Annotator Section */}
-        <section className="mb-8">
-          <h2 className="text-xl font-semibold mb-2">Record from Live Camera (Brio/Oak)</h2>
-          <LiveCameraAnnotator onVideoUploaded={async (file) => {
-            // Simulate ImportVideoDialog's upload flow: open dialog with file pre-selected
-            setIsImportDialogOpen(true);
-            // Optionally, you could auto-fill ImportVideoDialog with the file, or handle upload directly here
-            // For now, user will fill in details in the dialog after upload
-          }} />
-        </section>
-        {apiError && (
-          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
-            <div className="text-amber-500 shrink-0 mt-0.5">
-              <AlertCircle className="h-5 w-5" />
+        {/* Camera Selection Section */}
+        <section className="mb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-1">
+              <CameraSelector 
+                onCameraSelect={setSelectedCamera}
+                onSettingsChange={setCameraSettings}
+                showSettings={true}
+              />
             </div>
-            <div>
-              <h3 className="font-medium text-amber-800">Connection Issue</h3>
-              <p className="text-amber-700 text-sm mt-1">
-                We're having trouble connecting to the server. You're viewing sample videos in demo mode.
-                Your changes won't be saved permanently. Try refreshing the page.
-              </p>
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <Camera className="h-5 w-5 text-blue-600" />
+                  Live Camera Recording
+                  {selectedCamera?.isBRIO && (
+                    <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium">
+                      BRIO Optimized
+                    </span>
+                  )}
+                </h2>
+                <LiveCameraAnnotator onVideoUploaded={async (file) => {
+                  // Simulate ImportVideoDialog's upload flow: open dialog with file pre-selected
+                  setIsImportDialogOpen(true);
+                  // Optionally, you could auto-fill ImportVideoDialog with the file, or handle upload directly here
+                  // For now, user will fill in details in the dialog after upload
+                }} />
+              </div>
             </div>
           </div>
-        )}
+        </section>
         
         <section>
           <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
@@ -399,8 +390,17 @@ export default function Home() {
             </div>
           ) : videos.length === 0 ? (
             <div className="bg-white rounded-xl p-6 sm:p-8 text-center border-2 border-dashed border-gray-200">
-              <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <Film className="h-8 w-8 text-gray-400" />
+              {/* ASL Welcome Video */}
+              <div className="mx-auto w-64 h-36 mb-4">
+                <video
+                  src="/welcome-asl.mov"
+                  className="w-full h-full rounded-lg shadow"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  aria-label="Welcome message in ASL"
+                />
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">No videos yet</h3>
               <p className="text-gray-500 mb-6 max-w-md mx-auto">

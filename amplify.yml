@@ -1,3 +1,10 @@
+# IMPORTANT: To fix 404 errors on client-side routes (e.g., /about), add the following rewrite rule in the AWS Amplify Console under "Rewrites and redirects":
+#
+# Source address:  /<*>
+# Target address:  /index.html
+# Type:            200 (Rewrite)
+#
+# This ensures all routes are served by index.html for SPA routing.
 version: 1
 frontend:
   phases:
@@ -5,24 +12,30 @@ frontend:
       commands:
         - nvm install 20
         - nvm use 20
+        - node -v || { echo "Node.js installation failed"; exit 1; }
+        - npm -v || { echo "npm installation failed"; exit 1; }
         - 'echo "Current directory: $(pwd)"'
         - ls -la
         - cd frontend || { echo "frontend directory not found"; exit 1; }
         - 'echo "Frontend directory contents:"'
         - ls -la
-        - npm install --production=false
+        - 'echo "Cleaning previous installation to fix Rollup dependency issues..."'
+        - rm -rf node_modules package-lock.json || true
+        - 'echo "Installing dependencies..."'
+        - npm install --include=dev --platform=linux --arch=x64
+        - 'echo "Dependencies installed. Checking if vite is available:"'
+        - npx vite --version || { echo "Vite not found after installation"; exit 1; }
     build:
       commands:
         - 'echo "Building frontend..."'
         - 'echo "Environment variables:"'
         - 'echo "NODE_ENV: $NODE_ENV"'
-        - 'echo "VITE_BASE44_API_KEY: ${VITE_BASE44_API_KEY:+SET}"'
-        - 'echo "VITE_DATA_COLLECTION_API: ${VITE_DATA_COLLECTION_API:+SET}"'
-        - npm run build
+        - 'echo "VITE_DATA_COLLECTION_API: $VITE_DATA_COLLECTION_API"'
+        - npm run build  # Run build from frontend
         - 'echo "Build completed. Contents of dist:"'
         - ls -la dist/
   artifacts:
-    baseDirectory: frontend/dist
+    baseDirectory: frontend/dist  # Output should be in frontend/dist
     files:
       - '**/*'
   cache:

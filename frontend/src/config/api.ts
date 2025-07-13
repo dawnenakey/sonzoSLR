@@ -1,5 +1,7 @@
+/// <reference types="vite/client" />
+
 export const API_CONFIG = {
-  BASE_URL: 'https://qt8f7grhb5.execute-api.us-east-1.amazonaws.com/prod',
+  BASE_URL: import.meta.env.VITE_DATA_COLLECTION_API || 'https://qt8f7grhb5.execute-api.us-east-1.amazonaws.com/prod',
   TIMEOUT: 30000, // 30 seconds
   RETRY_ATTEMPTS: 3,
 };
