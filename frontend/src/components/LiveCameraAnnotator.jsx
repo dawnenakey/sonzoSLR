@@ -47,15 +47,29 @@ export default function LiveCameraAnnotator({ onVideoUploaded }) {
         return;
       }
 
-      // Test camera access
+      // Test camera access with timeout
       try {
-        const testStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const testStream = await Promise.race([
+          navigator.mediaDevices.getUserMedia({ video: true }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Camera access timeout')), 5000)
+          )
+        ]);
+        
         testStream.getTracks().forEach(track => track.stop());
         setConnectionStatus('connected');
         setError('');
       } catch (err) {
-        setConnectionStatus('permission-denied');
-        setError('Camera access denied. Please allow camera permissions.');
+        if (err.name === 'NotAllowedError') {
+          setConnectionStatus('permission-denied');
+          setError('Camera access denied. Please allow camera permissions.');
+        } else if (err.message.includes('timeout')) {
+          setConnectionStatus('slow');
+          setError('Camera access is slow. Please check your connection.');
+        } else {
+          setConnectionStatus('error');
+          setError('Camera access failed: ' + err.message);
+        }
       }
     } catch (err) {
       setConnectionStatus('error');
@@ -167,10 +181,27 @@ export default function LiveCameraAnnotator({ onVideoUploaded }) {
 
   // Process recorded video
   const processRecordedVideo = async () => {
-    if (recordedChunks.length === 0) return;
+    if (recordedChunks.length === 0) {
+      setError('No recorded video to process');
+      return;
+    }
     
     try {
+      setIsUploading(true);
+      setError('');
+      
+      // Validate recorded chunks
+      if (recordedChunks.length === 0 || recordedChunks.some(chunk => chunk.size === 0)) {
+        throw new Error('Invalid recording data');
+      }
+      
       const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      
+      // Validate blob
+      if (blob.size === 0) {
+        throw new Error('Empty video data');
+      }
+      
       const file = new File([blob], `live-recording-${Date.now()}.webm`, { type: 'video/webm' });
       
       // Create video data object for enhanced viewer
@@ -195,7 +226,10 @@ export default function LiveCameraAnnotator({ onVideoUploaded }) {
       
       setRecordedChunks([]);
     } catch (err) {
+      console.error('Video processing error:', err);
       setError('Failed to process recorded video: ' + err.message);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -211,10 +245,12 @@ export default function LiveCameraAnnotator({ onVideoUploaded }) {
   const getConnectionStatusColor = () => {
     switch (connectionStatus) {
       case 'connected': return 'bg-green-500';
+      case 'slow': return 'bg-yellow-500';
       case 'degraded': return 'bg-yellow-500';
       case 'disconnected': return 'bg-red-500';
       case 'no-devices': return 'bg-red-500';
       case 'permission-denied': return 'bg-orange-500';
+      case 'error': return 'bg-red-500';
       default: return 'bg-gray-500';
     }
   };
@@ -222,11 +258,13 @@ export default function LiveCameraAnnotator({ onVideoUploaded }) {
   const getConnectionStatusText = () => {
     switch (connectionStatus) {
       case 'connected': return 'Connected';
+      case 'slow': return 'Slow Connection';
       case 'degraded': return 'Slow Connection';
       case 'disconnected': return 'Disconnected';
       case 'no-devices': return 'No Cameras';
       case 'permission-denied': return 'Permission Denied';
-      default: return 'Unknown';
+      case 'error': return 'Connection Error';
+      default: return 'Checking...';
     }
   };
 
@@ -251,6 +289,36 @@ export default function LiveCameraAnnotator({ onVideoUploaded }) {
             {showAdvancedFeatures ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             <span>{showAdvancedFeatures ? 'Hide' : 'Show'} Advanced</span>
           </Button>
+        </div>
+      </div>
+
+      {/* Camera Display */}
+      <div className="mb-6">
+        <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full h-full object-cover"
+          />
+          {!isCameraActive && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
+              <div className="text-center text-white">
+                <Camera className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                <p className="text-lg font-medium">Camera Not Active</p>
+                <p className="text-sm text-gray-400">Click "Start Camera" to begin</p>
+              </div>
+            </div>
+          )}
+          {recording && (
+            <div className="absolute top-4 right-4">
+              <div className="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2">
+                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                REC
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -280,6 +348,12 @@ export default function LiveCameraAnnotator({ onVideoUploaded }) {
             </Alert>
           )}
           
+          {/* Connection Status */}
+          <div className="flex items-center gap-2 mb-4">
+            <div className={`w-2 h-2 rounded-full ${getConnectionStatusColor()}`}></div>
+            <span className="text-sm text-gray-600">{getConnectionStatusText()}</span>
+          </div>
+
           {/* Camera Selection */}
           <div className="space-y-2">
             <Label htmlFor="camera-select" className="text-sm font-medium">
