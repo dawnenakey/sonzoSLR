@@ -9,7 +9,8 @@ import { Progress } from "./components/ui/progress";
 import { 
   Camera, Video, Play, Pause, RotateCcw, Download, Upload, 
   CheckCircle, AlertCircle, Loader2, Eye, EyeOff, Settings,
-  Zap, Brain, Search, FileVideo, Clock, BarChart3, Home, User, Settings as SettingsIcon
+  Zap, Brain, Search, FileVideo, Clock, BarChart3, Home, User, Settings as SettingsIcon,
+  Briefcase
 } from 'lucide-react';
 import { useToast } from "./components/ui/use-toast";
 import AnnotationControls from "./components/AnnotationControls";
@@ -19,6 +20,7 @@ import VideoPlayer from "./components/VideoPlayer";
 import EnhancedVideoViewer from "./components/EnhancedVideoViewer";
 import LiveCameraAnnotator from "./components/LiveCameraAnnotator";
 import AdvancedSignSpotting from "./components/AdvancedSignSpotting";
+import JobCoaching from "./pages/JobCoaching";
 import { awsAPI } from './api/awsClient';
 
 interface Annotation {
@@ -337,6 +339,14 @@ function App() {
                   <BarChart3 className="h-4 w-4 mr-2" />
                   Analysis
                 </Button>
+                <Button
+                  variant={currentView === 'coaching' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setCurrentView('coaching')}
+                >
+                  <Briefcase className="h-4 w-4 mr-2" />
+                  Job Coaching
+                </Button>
               </div>
             </div>
           </div>
@@ -507,6 +517,10 @@ function App() {
               </CardContent>
             </Card>
           </div>
+        )}
+
+        {currentView === 'coaching' && (
+          <JobCoaching />
         )}
       </main>
     </div>
