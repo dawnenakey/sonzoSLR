@@ -1,5 +1,6 @@
 # Core dependencies
 flask>=2.3.0
+flask-cors>=4.0.0  # For CORS support
 opencv-python-headless==4.9.0.80  # Using headless version for cloud deployment
 numpy>=1.24.0,<2.0.0
 pandas==2.2.1

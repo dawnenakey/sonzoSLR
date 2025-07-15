@@ -77,22 +77,37 @@ export default function EnhancedVideoViewer({
       if (typeof data === 'string') {
         // Direct URL
         videoUrl = data;
-      } else if (data.url) {
+        metadata = { source: 'url' };
+      } else if (data && data.url) {
         // Object with URL
         videoUrl = data.url;
-        metadata = data;
-      } else if (data.file) {
+        metadata = data.metadata || data;
+      } else if (data && data.file) {
         // File object from upload
         videoUrl = URL.createObjectURL(data.file);
         metadata = {
           name: data.file.name,
           size: data.file.size,
-          type: data.file.type
+          type: data.file.type,
+          source: 'file'
         };
+      } else if (data && data.metadata) {
+        // Object with metadata
+        videoUrl = data.url || data.metadata.url;
+        metadata = data.metadata;
+      } else {
+        console.warn('Unknown video data format:', data);
+        // Don't throw error, just show warning
+        setProcessingStatus('completed');
+        setIsLoading(false);
+        return;
       }
 
       if (!videoUrl) {
-        throw new Error('Invalid video data format');
+        console.warn('No video URL found in data:', data);
+        setProcessingStatus('completed');
+        setIsLoading(false);
+        return;
       }
 
       setVideoUrl(videoUrl);

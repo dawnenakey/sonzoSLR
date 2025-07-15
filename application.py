@@ -2,6 +2,7 @@ import os
 import sys
 from pathlib import Path
 from flask import Flask, jsonify
+from flask_cors import CORS
 from datetime import datetime
 
 # Add the application directory to the Python path
@@ -10,6 +11,7 @@ sys.path.insert(0, str(application_path))
 
 # Create Flask app for health checks and API endpoints
 app = Flask(__name__)
+CORS(app, origins=['*'], methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
 
 @app.route('/api/health')
 def health_check():

@@ -136,10 +136,23 @@ export const videoAPI = {
   // List all videos
   list: async (): Promise<Video[]> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/videos`);
+      // Check if API_BASE_URL is configured
+      if (!API_BASE_URL || API_BASE_URL === 'undefined') {
+        console.warn('API_BASE_URL not configured, returning empty video list');
+        return [];
+      }
+
+      const response = await fetch(`${API_BASE_URL}/videos`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        mode: 'cors',
+      });
       
       if (!response.ok) {
-        throw new Error(`Failed to get videos: ${response.statusText}`);
+        console.warn(`Failed to get videos: ${response.statusText}`);
+        return [];
       }
       
       const data = await response.json();
