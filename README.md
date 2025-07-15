@@ -2,63 +2,75 @@
 
 ## Live Demo
 
-[Try the app on Streamlit Cloud](https://spokhand.streamlit.app)
+[Try the app on AWS Amplify](https://main.d1234567890.amplifyapp.com)
 
 [![Codecov](https://codecov.io/gh/dawnenakey/spokhandSLR/branch/main/graph/badge.svg)](https://codecov.io/gh/dawnenakey/spokhandSLR)
 [![Python Tests](https://github.com/dawnenakey/spokhandSLR/actions/workflows/tests.yml/badge.svg)](https://github.com/dawnenakey/spokhandSLR/actions/workflows/tests.yml)
 [![Lint](https://github.com/dawnenakey/spokhandSLR/actions/workflows/lint.yml/badge.svg)](https://github.com/dawnenakey/spokhandSLR/actions/workflows/lint.yml)
 
-This project is a Streamlit web app for sign language recognition and model evaluation, built for the Masters of Data Science Capstone 2025 by Dawnena Key.
+This project is a React-based web app for sign language annotation and AI-powered recognition, built for the Masters of Data Science Capstone 2025 by Dawnena Key.
 
 ## Overview
 
-This capstone demonstrates a video-based sign language recognition system using deep learning. The app is deployed on [Streamlit Cloud](https://streamlit.io/cloud) for interactive demonstration and also leverages AWS for scalable data storage and processing.
+This capstone demonstrates a video-based sign language recognition system using deep learning and AI-powered sign spotting. The app is deployed on [AWS Amplify](https://aws.amazon.com/amplify/) for interactive demonstration and leverages AWS for scalable data storage and processing.
 
 ## Features
 
-- Upload sign language videos for analysis and recognition
-- Visualize model architecture, training metrics, confusion matrix, classification report, per-class accuracy, and ROC/AUC
-- Real metrics from your trained model (classification report and ROC/AUC)
+- Upload and annotate sign language videos with precise timecodes
+- AI-powered sign spotting and disambiguation using Large Language Models
+- Advanced video database management with AWS S3 integration
+- Real-time camera support for live annotation
+- Export standardized JSON annotations for research
 - Cloud-based, interactive demo for easy sharing and evaluation
 
 ## How to Run Locally
 
 1. **Clone the repo:**
    ```bash
-   git clone https://github.com/dawnenakey/spokhandslr.git
-   cd spokhandslr
+   git clone https://github.com/dawnenakey/spokhandSLR.git
+   cd spokhandSLR
    ```
-2. **Install dependencies:**
+2. **Install backend dependencies:**
    ```bash
    pip install -r requirements.txt
    ```
-3. **Run the app:**
+3. **Install frontend dependencies:**
    ```bash
-   streamlit run streamlit_app.py
+   cd frontend
+   npm install
+   ```
+4. **Run the backend:**
+   ```bash
+   python application.py
+   ```
+5. **Run the frontend (in another terminal):**
+   ```bash
+   cd frontend
+   npm run dev
    ```
 
 ## Cloud & AWS Setup
 
-- The Streamlit app is deployed on [Streamlit Cloud](https://streamlit.io/cloud) for demonstration purposes.
+- The React app is deployed on [AWS Amplify](https://aws.amazon.com/amplify/) for demonstration purposes.
 - AWS is used for backend data storage and processing (already set up for this project).
 - If you wish to reproduce the AWS setup, see `AWS_SETUP.md` and related scripts in this repo.
-- **You do NOT need AWS to run the Streamlit demo locally or on Streamlit Cloud.**
+- **You do NOT need AWS to run the app locally.**
 
 ## Files
 
-- `streamlit_app.py`: Main Streamlit app
-- `requirements.txt`: Python dependencies (minimal for Streamlit Cloud)
-- `classification_report.csv`: Model evaluation metrics (replace with your own for custom results)
-- `roc_results.pkl`: ROC/AUC data (replace with your own for custom results)
-- `generate_roc_results.py`: Script to generate ROC data (optional, for reproducibility)
+- `application.py`: Main Flask backend app
+- `frontend/`: React frontend application
+- `requirements.txt`: Python dependencies
+- `amplify.yml`: AWS Amplify build configuration
 - `README.md`: This file
 - `AWS_SETUP.md`, `aws_setup.sh`, `aws-policy.json`, etc.: AWS setup and deployment scripts (optional for demo)
 
 ## Notes
 
-- If you want to use your own model results, replace `classification_report.csv` and `roc_results.pkl` with your own files.
-- Sample data/videos are not included due to size; see the app for upload instructions.
-- The app does **not** require local GPU or heavy ML dependencies for demonstration—everything is precomputed and visualized.
+- The app supports both local video uploads and AWS S3 video database integration.
+- Advanced AI features include sign spotting and LLM-based disambiguation.
+- Real-time camera support for live annotation and analysis.
+- The app does **not** require local GPU or heavy ML dependencies for demonstration.
 
 ## Contact
 
