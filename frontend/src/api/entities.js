@@ -1,5 +1,7 @@
-import { Annotation } from './awsClient';
-export { Annotation };
-// export const Annotation = LocalAnnotationClient.Annotation;
-// export const Video = LocalAnnotationClient.Video;
-// User export removed or mocked as needed
+import { annotationAPI, Annotation as AnnotationInterface } from './awsClient';
+
+// Export the Annotation interface for type checking
+export { AnnotationInterface as Annotation };
+
+// Export the annotation API as AnnotationEntity for backward compatibility
+export const AnnotationEntity = annotationAPI;

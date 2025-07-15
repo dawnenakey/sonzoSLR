@@ -2,7 +2,12 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Label } from './ui/label';
 import { Button } from './ui/button';
-import { Camera, Video, Settings } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Badge } from './ui/badge';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Progress } from './ui/progress';
+import { Camera, Video, Settings, Upload, CheckCircle, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
+import EnhancedVideoViewer from './EnhancedVideoViewer';
 
 export default function LiveCameraAnnotator({ onVideoUploaded }) {
   const videoRef = useRef(null);
@@ -15,6 +20,9 @@ export default function LiveCameraAnnotator({ onVideoUploaded }) {
   const [selectedCamera, setSelectedCamera] = useState('');
   const [cameraStream, setCameraStream] = useState(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState('connected');
+  const [showAdvancedFeatures, setShowAdvancedFeatures] = useState(true);
+  const [processedVideoData, setProcessedVideoData] = useState(null);
   const [cameraSettings, setCameraSettings] = useState({
     resolution: '1920x1080',
     frameRate: 60,
@@ -24,7 +32,36 @@ export default function LiveCameraAnnotator({ onVideoUploaded }) {
   // Get available cameras on component mount
   useEffect(() => {
     getAvailableCameras();
+    checkConnectionHealth();
   }, []);
+
+  const checkConnectionHealth = async () => {
+    try {
+      // Check if we can access camera devices
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const hasVideoDevices = devices.some(device => device.kind === 'videoinput');
+      
+      if (!hasVideoDevices) {
+        setConnectionStatus('no-devices');
+        setError('No camera devices found');
+        return;
+      }
+
+      // Test camera access
+      try {
+        const testStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        testStream.getTracks().forEach(track => track.stop());
+        setConnectionStatus('connected');
+        setError('');
+      } catch (err) {
+        setConnectionStatus('permission-denied');
+        setError('Camera access denied. Please allow camera permissions.');
+      }
+    } catch (err) {
+      setConnectionStatus('error');
+      setError('Failed to check camera availability');
+    }
+  };
 
   const getAvailableCameras = async () => {
     try {
@@ -34,7 +71,8 @@ export default function LiveCameraAnnotator({ onVideoUploaded }) {
       const cameras = videoDevices.map(device => ({
         deviceId: device.deviceId,
         label: device.label || `Camera ${device.deviceId.slice(0, 8)}...`,
-        isBRIO: device.label?.toLowerCase().includes('brio') || false
+        isBRIO: device.label?.toLowerCase().includes('brio') || false,
+        isOAK: device.label?.toLowerCase().includes('oak') || false
       }));
       
       setAvailableCameras(cameras);
@@ -78,9 +116,11 @@ export default function LiveCameraAnnotator({ onVideoUploaded }) {
       }
       
       setIsCameraActive(true);
+      setConnectionStatus('connected');
     } catch (err) {
       setError('Could not access camera: ' + err.message);
       setIsCameraActive(false);
+      setConnectionStatus('error');
     }
   };
 
@@ -125,24 +165,37 @@ export default function LiveCameraAnnotator({ onVideoUploaded }) {
     }
   };
 
-  // Upload video to AWS
-  const uploadVideo = async () => {
+  // Process recorded video
+  const processRecordedVideo = async () => {
     if (recordedChunks.length === 0) return;
-    setIsUploading(true);
-    setError('');
+    
     try {
       const blob = new Blob(recordedChunks, { type: 'video/webm' });
       const file = new File([blob], `live-recording-${Date.now()}.webm`, { type: 'video/webm' });
-      // Use your existing upload API (e.g., sessionAPI.uploadVideo or similar)
-      // For demo, we'll just call onVideoUploaded with the file
+      
+      // Create video data object for enhanced viewer
+      const videoData = {
+        file: file,
+        url: URL.createObjectURL(blob),
+        metadata: {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          source: 'live-camera',
+          timestamp: new Date().toISOString()
+        }
+      };
+      
+      setProcessedVideoData(videoData);
+      
+      // Notify parent component
       if (onVideoUploaded) {
         await onVideoUploaded(file);
       }
+      
       setRecordedChunks([]);
     } catch (err) {
-      setError('Upload failed: ' + err.message);
-    } finally {
-      setIsUploading(false);
+      setError('Failed to process recorded video: ' + err.message);
     }
   };
 
@@ -155,148 +208,247 @@ export default function LiveCameraAnnotator({ onVideoUploaded }) {
     }
   };
 
+  const getConnectionStatusColor = () => {
+    switch (connectionStatus) {
+      case 'connected': return 'bg-green-500';
+      case 'degraded': return 'bg-yellow-500';
+      case 'disconnected': return 'bg-red-500';
+      case 'no-devices': return 'bg-red-500';
+      case 'permission-denied': return 'bg-orange-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const getConnectionStatusText = () => {
+    switch (connectionStatus) {
+      case 'connected': return 'Connected';
+      case 'degraded': return 'Slow Connection';
+      case 'disconnected': return 'Disconnected';
+      case 'no-devices': return 'No Cameras';
+      case 'permission-denied': return 'Permission Denied';
+      default: return 'Unknown';
+    }
+  };
+
   const selectedCameraInfo = availableCameras.find(cam => cam.deviceId === selectedCamera);
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center">
-      <div className="flex items-center gap-2 mb-4">
-        <Camera className="h-5 w-5 text-blue-600" />
-        <h2 className="text-lg font-bold">Live Camera Annotator</h2>
-        {selectedCameraInfo?.isBRIO && (
-          <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium">
-            BRIO
-          </span>
-        )}
-      </div>
-      
-      {error && <div className="text-red-500 mb-4 text-center">{error}</div>}
-      
-      {/* Camera Selection */}
-      <div className="w-full max-w-md mb-4">
-        <Label htmlFor="camera-select" className="text-sm font-medium mb-2 block">
-          Select Camera Device
-        </Label>
-        <Select value={selectedCamera} onValueChange={handleCameraChange}>
-          <SelectTrigger>
-            <SelectValue placeholder="Choose a camera" />
-          </SelectTrigger>
-          <SelectContent>
-            {availableCameras.map((camera) => (
-              <SelectItem key={camera.deviceId} value={camera.deviceId}>
-                <div className="flex items-center gap-2">
-                  {camera.isBRIO && <Video className="h-4 w-4 text-blue-600" />}
-                  {camera.label}
-                  {camera.isBRIO && (
-                    <span className="text-xs text-blue-600 font-medium">(BRIO)</span>
-                  )}
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Camera Settings */}
-      <div className="w-full max-w-md mb-4">
-        <Label className="text-sm font-medium mb-2 block flex items-center gap-2">
-          <Settings className="h-4 w-4" />
-          Camera Settings
-        </Label>
-        <div className="grid grid-cols-2 gap-2">
-          <Select 
-            value={cameraSettings.resolution} 
-            onValueChange={(value) => setCameraSettings(prev => ({ ...prev, resolution: value }))}
+    <div className="space-y-6">
+      {/* Connection Status */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <div className={`w-3 h-3 rounded-full ${getConnectionStatusColor()}`}></div>
+          <span className="text-sm text-gray-600">{getConnectionStatusText()}</span>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAdvancedFeatures(!showAdvancedFeatures)}
+            className="flex items-center space-x-2"
           >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1920x1080">1080p (1920x1080)</SelectItem>
-              <SelectItem value="1280x720">720p (1280x720)</SelectItem>
-              <SelectItem value="854x480">480p (854x480)</SelectItem>
-            </SelectContent>
-          </Select>
-          
-          <Select 
-            value={cameraSettings.frameRate.toString()} 
-            onValueChange={(value) => setCameraSettings(prev => ({ ...prev, frameRate: parseInt(value) }))}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="60">60 FPS</SelectItem>
-              <SelectItem value="30">30 FPS</SelectItem>
-              <SelectItem value="24">24 FPS</SelectItem>
-            </SelectContent>
-          </Select>
+            {showAdvancedFeatures ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            <span>{showAdvancedFeatures ? 'Hide' : 'Show'} Advanced</span>
+          </Button>
         </div>
       </div>
 
-      {/* Video Preview */}
-      <video 
-        ref={videoRef} 
-        autoPlay 
-        playsInline 
-        className="w-full max-w-md rounded-lg mb-4 bg-black border-2 border-gray-200" 
-      />
-      
       {/* Camera Controls */}
-      <div className="flex gap-2 mb-4 flex-wrap justify-center">
-        {!isCameraActive ? (
-          <Button onClick={startCamera} className="bg-blue-600 hover:bg-blue-700">
-            <Camera className="mr-2 h-4 w-4" />
-            Start Camera
-          </Button>
-        ) : (
-          <Button onClick={stopCamera} variant="outline" className="border-red-300 text-red-600 hover:bg-red-50">
-            Stop Camera
-          </Button>
-        )}
-        
-        {!recording ? (
-          <Button 
-            onClick={startRecording} 
-            className="bg-green-600 hover:bg-green-700" 
-            disabled={!isCameraActive}
-          >
-            <Video className="mr-2 h-4 w-4" />
-            Start Recording
-          </Button>
-        ) : (
-          <Button 
-            onClick={stopRecording} 
-            className="bg-red-600 hover:bg-red-700"
-          >
-            Stop Recording
-          </Button>
-        )}
-        
-        <Button 
-          onClick={uploadVideo} 
-          className="bg-indigo-600 hover:bg-indigo-700" 
-          disabled={recordedChunks.length === 0 || isUploading}
-        >
-          {isUploading ? 'Uploading...' : 'Upload Video'}
-        </Button>
-      </div>
-      
-      {/* Recording Status */}
-      {recordedChunks.length > 0 && (
-        <div className="text-sm text-gray-600 mb-2 text-center">
-          Recorded video ready to upload ({(recordedChunks.reduce((acc, c) => acc + c.size, 0) / 1024 / 1024).toFixed(2)} MB)
-        </div>
-      )}
-      
-      {/* Camera Info */}
-      {selectedCameraInfo && (
-        <div className="text-xs text-gray-500 text-center mt-2">
-          {selectedCameraInfo.isBRIO ? (
-            <span className="text-blue-600">✓ BRIO camera detected - optimized for high-quality recording</span>
-          ) : (
-            <span>Using {selectedCameraInfo.label}</span>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Camera className="h-5 w-5 text-blue-600" />
+            Live Camera Recording
+            {selectedCameraInfo?.isBRIO && (
+              <Badge className="bg-blue-100 text-blue-800">BRIO</Badge>
+            )}
+            {selectedCameraInfo?.isOAK && (
+              <Badge className="bg-green-100 text-green-800">OAK</Badge>
+            )}
+          </CardTitle>
+          <CardDescription>
+            Record and analyze sign language videos with advanced AI features
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
-        </div>
+          
+          {/* Camera Selection */}
+          <div className="space-y-2">
+            <Label htmlFor="camera-select" className="text-sm font-medium">
+              Select Camera Device
+            </Label>
+            <Select value={selectedCamera} onValueChange={handleCameraChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose a camera" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableCameras.map((camera) => (
+                  <SelectItem key={camera.deviceId} value={camera.deviceId}>
+                    <div className="flex items-center gap-2">
+                      {camera.isBRIO && <Video className="h-4 w-4 text-blue-600" />}
+                      {camera.isOAK && <Camera className="h-4 w-4 text-green-600" />}
+                      {camera.label}
+                      {camera.isBRIO && (
+                        <Badge className="text-xs">BRIO</Badge>
+                      )}
+                      {camera.isOAK && (
+                        <Badge className="text-xs">OAK</Badge>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Camera Settings */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Resolution</Label>
+              <Select 
+                value={cameraSettings.resolution} 
+                onValueChange={(value) => setCameraSettings(prev => ({ ...prev, resolution: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1920x1080">1920x1080 (1080p)</SelectItem>
+                  <SelectItem value="1280x720">1280x720 (720p)</SelectItem>
+                  <SelectItem value="854x480">854x480 (480p)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Frame Rate</Label>
+              <Select 
+                value={cameraSettings.frameRate.toString()} 
+                onValueChange={(value) => setCameraSettings(prev => ({ ...prev, frameRate: parseInt(value) }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="60">60 FPS</SelectItem>
+                  <SelectItem value="30">30 FPS</SelectItem>
+                  <SelectItem value="24">24 FPS</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Quality</Label>
+              <Select 
+                value={cameraSettings.quality} 
+                onValueChange={(value) => setCameraSettings(prev => ({ ...prev, quality: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Camera Controls */}
+          <div className="flex gap-2 flex-wrap justify-center">
+            {!isCameraActive ? (
+              <Button onClick={startCamera} className="bg-blue-600 hover:bg-blue-700">
+                <Camera className="mr-2 h-4 w-4" />
+                Start Camera
+              </Button>
+            ) : (
+              <Button onClick={stopCamera} variant="outline" className="border-red-300 text-red-600 hover:bg-red-50">
+                Stop Camera
+              </Button>
+            )}
+            
+            {!recording ? (
+              <Button 
+                onClick={startRecording} 
+                className="bg-green-600 hover:bg-green-700" 
+                disabled={!isCameraActive}
+              >
+                <Video className="mr-2 h-4 w-4" />
+                Start Recording
+              </Button>
+            ) : (
+              <Button 
+                onClick={stopRecording} 
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Stop Recording
+              </Button>
+            )}
+            
+            <Button 
+              onClick={processRecordedVideo} 
+              className="bg-indigo-600 hover:bg-indigo-700" 
+              disabled={recordedChunks.length === 0 || isUploading}
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Process Video
+                </>
+              )}
+            </Button>
+          </div>
+          
+          {/* Recording Status */}
+          {recordedChunks.length > 0 && (
+            <div className="text-sm text-gray-600 text-center">
+              <div className="flex items-center justify-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span>
+                  Recorded video ready to process ({(recordedChunks.reduce((acc, c) => acc + c.size, 0) / 1024 / 1024).toFixed(2)} MB)
+                </span>
+              </div>
+            </div>
+          )}
+          
+          {/* Camera Info */}
+          {selectedCameraInfo && (
+            <div className="text-xs text-gray-500 text-center">
+              {selectedCameraInfo.isBRIO ? (
+                <span className="text-blue-600">✓ BRIO camera detected - optimized for high-quality recording</span>
+              ) : selectedCameraInfo.isOAK ? (
+                <span className="text-green-600">✓ OAK camera detected - optimized for depth analysis</span>
+              ) : (
+                <span>Using {selectedCameraInfo.label}</span>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Enhanced Video Viewer */}
+      {processedVideoData && (
+        <EnhancedVideoViewer
+          videoData={processedVideoData}
+          showAdvancedFeatures={showAdvancedFeatures}
+          onVideoProcessed={(data) => {
+            console.log('Video processed:', data);
+          }}
+        />
       )}
     </div>
   );

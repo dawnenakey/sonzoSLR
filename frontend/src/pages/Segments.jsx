@@ -47,7 +47,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { Annotation as AnnotationEntity } from '@/api/entities';
+import { AnnotationEntity } from '@/api/entities';
 import { videoAPI } from '@/api/awsClient';
 import { formatTime } from '../components/timeUtils';
 import AnnotationDetailDialog from '../components/AnnotationDetailDialog';
