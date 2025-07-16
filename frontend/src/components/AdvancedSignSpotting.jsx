@@ -18,7 +18,7 @@ export default function AdvancedSignSpotting({ videoId, onAnnotationsGenerated }
     'Extracting I3D spatiotemporal features (1024-dim)...',
     'Detecting left and right hands with MediaPipe...',
     'Extracting hand shape features (2048-dim each)...',
-    'Performing dictionary-based matching (1000 vocab)...',
+    'Performing dictionary-based matching (1000 ASL vocab)...',
     `Applying ${fusionStrategy} feature fusion...`,
     'Running LLM disambiguation with beam search...',
     'Generating final annotations...'
@@ -201,10 +201,10 @@ export default function AdvancedSignSpotting({ videoId, onAnnotationsGenerated }
                 onChange={(e) => setVocabularySize(parseInt(e.target.value))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
               >
-                <option value={1000}>1,000 signs (Paper Default)</option>
-                <option value={1500}>1,500 signs</option>
-                <option value={2000}>2,000 signs</option>
-                <option value={4373}>4,373 signs (Maximum)</option>
+                <option value={1000}>1,000 ASL signs (Paper Default)</option>
+                <option value={1500}>1,500 ASL signs</option>
+                <option value={2000}>2,000 ASL signs</option>
+                <option value={4373}>4,373 ASL signs (Maximum)</option>
               </select>
             </div>
             
@@ -244,7 +244,7 @@ export default function AdvancedSignSpotting({ videoId, onAnnotationsGenerated }
             <ul className="text-xs text-blue-800 space-y-1">
               <li>• I3D Features: 1024-dimensional spatiotemporal features</li>
               <li>• Hand Features: 2048-dimensional each (LH + RH)</li>
-              <li>• Dictionary: 1000 BSL vocabulary items</li>
+              <li>• Dictionary: 1000 ASL vocabulary items</li>
               <li>• Late Fusion: α = 0.9 (optimal from paper)</li>
               <li>• Beam Width: 5 (default from paper)</li>
             </ul>

@@ -16,7 +16,7 @@ export default function CameraSelector({
   const [selectedCamera, setSelectedCamera] = useState('');
   const [cameraSettings, setCameraSettings] = useState({
     resolution: '1920x1080',
-    frameRate: 60,
+    frameRate: 30,
     quality: 'high'
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -42,6 +42,10 @@ export default function CameraSelector({
         label: device.label || `Camera ${device.deviceId.slice(0, 8)}...`,
         isBRIO: device.label?.toLowerCase().includes('brio') || false,
         isOAK: device.label?.toLowerCase().includes('oak') || false,
+        is4K: device.label?.toLowerCase().includes('4k') || 
+               device.label?.toLowerCase().includes('ultra') ||
+               device.label?.toLowerCase().includes('high') ||
+               device.label?.toLowerCase().includes('pro'),
         isBuiltIn: device.label?.toLowerCase().includes('built-in') || 
                    device.label?.toLowerCase().includes('facetime') ||
                    device.label?.toLowerCase().includes('webcam')
@@ -49,9 +53,10 @@ export default function CameraSelector({
       
       setAvailableCameras(cameras);
       
-      // Auto-select BRIO if available, otherwise first camera
+      // Auto-select best camera available
       const brioCamera = cameras.find(cam => cam.isBRIO);
       const oakCamera = cameras.find(cam => cam.isOAK);
+      const fourKCamera = cameras.find(cam => cam.is4K);
       
       if (brioCamera) {
         setSelectedCamera(brioCamera.deviceId);
@@ -59,6 +64,14 @@ export default function CameraSelector({
         setCameraSettings({
           resolution: '1920x1080',
           frameRate: 60,
+          quality: 'high'
+        });
+      } else if (fourKCamera) {
+        setSelectedCamera(fourKCamera.deviceId);
+        // Optimize settings for 4K camera
+        setCameraSettings({
+          resolution: '3840x2160',
+          frameRate: 30,
           quality: 'high'
         });
       } else if (oakCamera) {
@@ -106,6 +119,16 @@ export default function CameraSelector({
       if (onSettingsChange) {
         onSettingsChange(newSettings);
       }
+    } else if (camera?.is4K) {
+      const newSettings = {
+        resolution: '3840x2160',
+        frameRate: 30,
+        quality: 'high'
+      };
+      setCameraSettings(newSettings);
+      if (onSettingsChange) {
+        onSettingsChange(newSettings);
+      }
     } else if (camera?.isOAK) {
       const newSettings = {
         resolution: '1280x720',
@@ -138,6 +161,7 @@ export default function CameraSelector({
   const getCameraBadge = (camera) => {
     if (camera.isBRIO) return <Badge className="bg-blue-100 text-blue-800">BRIO</Badge>;
     if (camera.isOAK) return <Badge className="bg-green-100 text-green-800">OAK</Badge>;
+    if (camera.is4K) return <Badge className="bg-purple-100 text-purple-800">4K</Badge>;
     if (camera.isBuiltIn) return <Badge className="bg-gray-100 text-gray-800">Built-in</Badge>;
     return null;
   };
@@ -243,6 +267,7 @@ export default function CameraSelector({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="3840x2160">4K (3840x2160)</SelectItem>
                   <SelectItem value="1920x1080">1080p (1920x1080)</SelectItem>
                   <SelectItem value="1280x720">720p (1280x720)</SelectItem>
                   <SelectItem value="854x480">480p (854x480)</SelectItem>
@@ -257,9 +282,10 @@ export default function CameraSelector({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="60">60 FPS</SelectItem>
-                  <SelectItem value="30">30 FPS</SelectItem>
-                  <SelectItem value="24">24 FPS</SelectItem>
+                  <SelectItem value="60">60 FPS (Smooth)</SelectItem>
+                  <SelectItem value="30">30 FPS (Standard)</SelectItem>
+                  <SelectItem value="24">24 FPS (Film)</SelectItem>
+                  <SelectItem value="15">15 FPS (Low)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

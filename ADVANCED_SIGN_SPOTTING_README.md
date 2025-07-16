@@ -40,7 +40,7 @@ The research paper describes a sophisticated two-stage architecture for sign lan
 ## Implementation Details from the Paper
 
 ### Dictionary Structure
-The paper uses a dictionary of 1,000 British Sign Language (BSL) vocabulary items:
+The paper uses a dictionary of 1,000 American Sign Language (ASL) vocabulary items:
 
 ```
 D = {(D_i, g_i)}_{i=1}^{1000}
@@ -111,7 +111,7 @@ ĝ_1:X = arg max_{g_1:X ∈ ∏_{x=1}^X C_x} ∑_{x=1}^X (log p(g_x | g_1:x-1) 
 - **Best Performance**: Gemma-2 9B with beam width 10-15
 
 ### Real-World Evaluation
-- **Baseline (BOBSL I3D)**: 90.89% WER
+- **Baseline (BOASL I3D)**: 90.89% WER
 - **Late Fusion**: 47.24% WER (without disambiguation)
 - **Late Fusion + LLM**: 44.73% WER (with disambiguation)
 - **Top-5 Accuracy**: 34.81%
@@ -385,9 +385,9 @@ The implementation provided in this document serves as a foundation that can be 
 
 Based on the paper's results:
 
-- **Baseline WER**: 90.89% (BOBSL I3D)
+- **Baseline WER**: 90.89% (BOASL I3D)
 - **Late Fusion WER**: 44.73% (with LLM disambiguation)
 - **Top-5 Accuracy**: 34.81%
-- **Dictionary Size**: 1000 BSL vocabulary items
+- **Dictionary Size**: 1000 ASL vocabulary items
 - **Beam Width**: 5 (optimal for most cases)
 - **Fusion Weight**: α = 0.9 (late fusion) 

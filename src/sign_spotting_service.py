@@ -181,10 +181,10 @@ class SignDictionary:
     
     def __init__(self, dictionary_path: Optional[str] = None):
         self.sign_dictionary = self._load_dictionary(dictionary_path)
-        self.vocabulary_size = 1000  # As specified in the paper
+        self.vocabulary_size = 1000  # ASL vocabulary size as specified in the paper
         
     def _load_dictionary(self, dictionary_path: Optional[str] = None):
-        """Load sign dictionary with features as specified in the paper.
+        """Load ASL sign dictionary with features as specified in the paper.
         
         Dictionary structure: D = {(D_i, g_i)}_{i=1}^{1000}
         where D_i = F_I3D_i ⊕ F_LH_i ⊕ F_RH_i (concatenated features)

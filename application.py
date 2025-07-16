@@ -1,7 +1,7 @@
 import os
 import sys
 from pathlib import Path
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request, Response
 from flask_cors import CORS
 from datetime import datetime
 
@@ -9,9 +9,15 @@ from datetime import datetime
 application_path = Path(__file__).parent
 sys.path.insert(0, str(application_path))
 
+# Import ASL-LEX service
+from src.asl_lex_service import create_asl_lex_routes
+
 # Create Flask app for health checks and API endpoints
 app = Flask(__name__)
 CORS(app, origins=['*'], methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
+
+# Register ASL-LEX routes
+create_asl_lex_routes(app)
 
 @app.route('/api/health')
 def health_check():

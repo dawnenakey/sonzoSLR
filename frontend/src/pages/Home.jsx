@@ -31,6 +31,8 @@ import LiveCameraAnnotator from '../components/LiveCameraAnnotator';
 import EnhancedVideoViewer from '../components/EnhancedVideoViewer';
 import CameraSelector from '../components/CameraSelector';
 import VideoDatabaseViewer from '../components/VideoDatabaseViewer';
+import AdvancedSignSpotting from '../components/AdvancedSignSpotting';
+import ASLLexDataManager from '../components/ASLLexDataManager';
 import { videoAPI } from '@/api/awsClient';
 import VideoThumbnail from '../components/VideoThumbnail';
 
@@ -42,6 +44,7 @@ export default function Home() {
   const [selectedCamera, setSelectedCamera] = useState(null);
   const [cameraSettings, setCameraSettings] = useState({});
   const [showDatabase, setShowDatabase] = useState(false);
+  const [showASLLex, setShowASLLex] = useState(false);
   
   const { toast } = useToast();
 
@@ -68,6 +71,19 @@ export default function Home() {
 
   const handleVideoUploaded = (videoData) => {
     setProcessedVideoData(videoData);
+    
+    // Add the uploaded video to the videos list
+    const newVideo = {
+      id: `uploaded-${Date.now()}`,
+      filename: videoData.file?.name || 'Uploaded Video',
+      size: videoData.file?.size || 0,
+      status: 'ready',
+      uploadedAt: new Date().toISOString(),
+      url: videoData.url
+    };
+    
+    setVideos(prev => [...prev, newVideo]);
+    
     toast({
       title: "Video Processed",
       description: "Video has been processed and is ready for analysis"
@@ -108,6 +124,14 @@ export default function Home() {
               >
                 <Database className="h-4 w-4" />
                 {showDatabase ? 'Hide' : 'Show'} Database
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowASLLex(!showASLLex)}
+                className="flex items-center gap-2"
+              >
+                <BookOpen className="h-4 w-4" />
+                {showASLLex ? 'Hide' : 'Show'} ASL-LEX
               </Button>
             </div>
           </div>
@@ -199,6 +223,27 @@ export default function Home() {
         {showDatabase && (
           <section className="mb-6">
             <VideoDatabaseViewer onVideoSelect={handleVideoSelect} />
+          </section>
+        )}
+
+        {/* ASL-LEX Data Manager Section */}
+        {showASLLex && (
+          <section className="mb-6">
+            <ASLLexDataManager />
+          </section>
+        )}
+
+        {/* Advanced Sign Spotting Section - Only show when advanced features are enabled and there's video data */}
+        {showAdvancedFeatures && processedVideoData && (
+          <section className="mb-6">
+            <AdvancedSignSpotting
+              videoRef={null}
+              analysisResults={null}
+              isAnalyzing={false}
+              onAnalyze={() => {
+                console.log('Advanced analysis triggered');
+              }}
+            />
           </section>
         )}
         
