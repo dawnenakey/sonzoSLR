@@ -47,7 +47,7 @@ import {
 } from './ui/select';
 import { useToast } from './ui/use-toast';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://qt8f7grhb5.execute-api.us-east-1.amazonaws.com/prod';
 
 const ASLLexDataManager = () => {
   const [signs, setSigns] = useState([]);
