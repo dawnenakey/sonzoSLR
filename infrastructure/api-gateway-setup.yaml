@@ -322,6 +322,115 @@ Resources:
         IntegrationHttpMethod: POST
         Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ASLLexLambdaFunction.Arn}/invocations'
 
+  # /api/asl-lex/statistics
+  StatisticsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ParentId: !GetAtt SpokHandAPI.RootResourceId
+      PathPart: 'statistics'
+
+  # GET /api/asl-lex/statistics
+  GetStatisticsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ResourceId: !Ref StatisticsResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ASLLexLambdaFunction.Arn}/invocations'
+
+  # /api/asl-lex/bulk-upload/template
+  TemplateResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ParentId: !Ref BulkUploadResource
+      PathPart: 'template'
+
+  # GET /api/asl-lex/bulk-upload/template
+  GetTemplateMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ResourceId: !Ref TemplateResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ASLLexLambdaFunction.Arn}/invocations'
+
+  # /api/asl-lex/bulk-upload/jobs/{jobId}
+  JobResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ParentId: !Ref JobsResource
+      PathPart: '{jobId}'
+
+  # GET /api/asl-lex/bulk-upload/jobs/{jobId}
+  GetJobMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ResourceId: !Ref JobResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      RequestParameters:
+        method.request.path.jobId: true
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ASLLexLambdaFunction.Arn}/invocations'
+
+  # /api/asl-lex/bulk-upload/jobs/{jobId}/cancel
+  CancelResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ParentId: !Ref JobResource
+      PathPart: 'cancel'
+
+  # POST /api/asl-lex/bulk-upload/jobs/{jobId}/cancel
+  PostCancelMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ResourceId: !Ref CancelResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      RequestParameters:
+        method.request.path.jobId: true
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ASLLexLambdaFunction.Arn}/invocations'
+
+  # /api/asl-lex/upload-video-with-metadata
+  UploadVideoResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ParentId: !GetAtt SpokHandAPI.RootResourceId
+      PathPart: 'upload-video-with-metadata'
+
+  # POST /api/asl-lex/upload-video-with-metadata
+  PostUploadVideoMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ResourceId: !Ref UploadVideoResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ASLLexLambdaFunction.Arn}/invocations'
+
   # Lambda Permission for API Gateway
   LambdaPermission:
     Type: AWS::Lambda::Permission
@@ -345,6 +454,11 @@ Resources:
       - GetAnalyticsMethod
       - PostBulkUploadMethod
       - GetJobsMethod
+      - GetStatisticsMethod
+      - GetTemplateMethod
+      - GetJobMethod
+      - PostCancelMethod
+      - PostUploadVideoMethod
     Properties:
       RestApiId: !Ref SpokHandAPI
       StageName: !Ref Environment
