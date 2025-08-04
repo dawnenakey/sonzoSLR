@@ -1,24 +1,63 @@
-import { useState, useEffect } from "react";
-import "./App.css";
-import { ImportVideoDialog } from "./components/ImportVideoDialog";
+import React, { useState, useEffect } from 'react';
 import { Button } from "./components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card";
 import { Badge } from "./components/ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
+import { Input } from "./components/ui/input";
+import { Textarea } from "./components/ui/textarea";
 import { Progress } from "./components/ui/progress";
+import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./components/ui/select";
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "./components/ui/dialog";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./components/ui/tooltip";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./components/ui/dropdown-menu";
+import { 
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "./components/ui/table";
+import { 
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "./components/ui/tabs";
 import { 
   Camera, Video, Play, Pause, RotateCcw, Download, Upload, 
   CheckCircle, AlertCircle, Loader2, Eye, EyeOff, Settings,
-  Zap, Brain, Search, FileVideo, Clock, BarChart3, Home, User, Settings as SettingsIcon
+  Zap, Brain, Search, FileVideo, Clock, BarChart3, Home, User, Settings as SettingsIcon, Database
 } from 'lucide-react';
 import { useToast } from "./components/ui/use-toast";
-import AnnotationControls from "./components/AnnotationControls";
-import AnnotationList from "./components/AnnotationList";
-import AnnotationTimeline from "./components/AnnotationTimeline";
-import VideoPlayer from "./components/VideoPlayer";
-import EnhancedVideoViewer from "./components/EnhancedVideoViewer";
 import LiveCameraAnnotator from "./components/LiveCameraAnnotator";
 import AdvancedSignSpotting from "./components/AdvancedSignSpotting";
+import EnhancedASLLexManager from './components/EnhancedASLLexManager';
 import { awsAPI } from './api/awsClient';
 
 interface Annotation {
@@ -289,226 +328,145 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="w-full bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-blue-700">SpokHand SLR</h1>
-              <div className="flex items-center space-x-2">
-                <div className={`w-3 h-3 rounded-full ${getConnectionStatusColor()}`}></div>
-                <span className="text-sm text-gray-600">{getConnectionStatusText()}</span>
-              </div>
+      <div className="container mx-auto px-4 py-8">
+        <header className="mb-8">
+          <div className="flex items-center gap-4 mb-4">
+            {/* SpokHand Logo */}
+            <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg shadow-md">
+              <span className="text-white font-bold text-lg">SH</span>
             </div>
-            
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAdvancedFeatures(!showAdvancedFeatures)}
-                className="flex items-center space-x-2"
-              >
-                {showAdvancedFeatures ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                <span>{showAdvancedFeatures ? 'Hide' : 'Show'} Advanced</span>
-              </Button>
-              
-              <div className="flex items-center space-x-2">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">SpokHand SLR</h1>
+              <p className="text-gray-600">Advanced Sign Language Recognition System</p>
+            </div>
+          </div>
+        </header>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Navigation Sidebar */}
+          <div className="lg:col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle>Navigation</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
                 <Button
-                  variant={currentView === 'home' ? 'default' : 'outline'}
-                  size="sm"
+                  variant={currentView === 'home' ? 'default' : 'ghost'}
+                  className="w-full justify-start"
                   onClick={() => setCurrentView('home')}
                 >
                   <Home className="h-4 w-4 mr-2" />
                   Home
                 </Button>
                 <Button
-                  variant={currentView === 'camera' ? 'default' : 'outline'}
-                  size="sm"
+                  variant={currentView === 'camera' ? 'default' : 'ghost'}
+                  className="w-full justify-start"
                   onClick={() => setCurrentView('camera')}
                 >
                   <Camera className="h-4 w-4 mr-2" />
                   Camera
                 </Button>
                 <Button
-                  variant={currentView === 'analysis' ? 'default' : 'outline'}
-                  size="sm"
+                  variant={currentView === 'analysis' ? 'default' : 'ghost'}
+                  className="w-full justify-start"
                   onClick={() => setCurrentView('analysis')}
                 >
                   <BarChart3 className="h-4 w-4 mr-2" />
                   Analysis
                 </Button>
-              </div>
-            </div>
+                <Button
+                  variant={currentView === 'database' ? 'default' : 'ghost'}
+                  className="w-full justify-start"
+                  onClick={() => setCurrentView('database')}
+                >
+                  <Database className="h-4 w-4 mr-2" />
+                  ASL-LEX Database
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Connection Status */}
+            <Card className="mt-4">
+              <CardHeader>
+                <CardTitle>System Status</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2">
+                  <div className={`w-3 h-3 rounded-full ${
+                    connectionStatus === 'connected' ? 'bg-green-500' :
+                    connectionStatus === 'degraded' ? 'bg-yellow-500' : 'bg-red-500'
+                  }`} />
+                  <span className="text-sm capitalize">{connectionStatus}</span>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {currentView === 'home' && (
-          <div className="space-y-8">
-            {/* Welcome Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Brain className="h-6 w-6 text-blue-600" />
-                  <span>Advanced Sign Language Recognition</span>
-                </CardTitle>
-                <CardDescription>
-                  Upload videos, record live camera feeds, and analyze sign language with advanced AI features
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="text-center p-4 border rounded-lg">
-                    <Upload className="h-8 w-8 mx-auto mb-2 text-blue-600" />
-                    <h3 className="font-semibold">Upload Videos</h3>
-                    <p className="text-sm text-gray-600">Import existing sign language videos for analysis</p>
-                  </div>
-                  <div className="text-center p-4 border rounded-lg">
-                    <Camera className="h-8 w-8 mx-auto mb-2 text-green-600" />
-                    <h3 className="font-semibold">Live Recording</h3>
-                    <p className="text-sm text-gray-600">Record and analyze sign language in real-time</p>
-                  </div>
-                  <div className="text-center p-4 border rounded-lg">
-                    <Brain className="h-8 w-8 mx-auto mb-2 text-purple-600" />
-                    <h3 className="font-semibold">AI Analysis</h3>
-                    <p className="text-sm text-gray-600">Advanced sign spotting and disambiguation</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Video Upload Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Upload Video</CardTitle>
-                <CardDescription>
-                  Import a video file for annotation and analysis
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="video-container mx-auto bg-black rounded-lg overflow-hidden mb-4">
-                  {videoUrl && <VideoPlayer videoUrl={videoUrl} onTimeUpdate={setCurrentTime} onDurationChange={setVideoDuration} />}
-                </div>
-                <div className="controls p-4 border rounded-md">
-                  {!selectedFile ? (
-                    <ImportVideoDialog 
-                      onFileSelect={handleFileSelect} 
-                      disabled={isUploading}
-                    />
-                  ) : (
-                    <div className="flex justify-center items-center gap-4">
-                      <p className="text-sm font-medium">
-                        Loaded: <strong>{selectedFile.name}</strong>
-                      </p>
-                      <Button onClick={handleReject} variant="destructive" disabled={isUploading}>
-                        Reject
-                      </Button>
-                      <Button onClick={handleAcceptAndUpload} disabled={isUploading}>
-                        {isUploading ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Uploading...
-                          </>
-                        ) : (
-                          'Accept & Upload'
-                        )}
-                      </Button>
+          {/* Main Content */}
+          <div className="lg:col-span-2">
+            {currentView === 'home' && (
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Welcome to SpokHand SLR</CardTitle>
+                    <CardDescription>
+                      Advanced Sign Language Recognition and Data Management
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="p-4 border rounded-lg">
+                        <h3 className="font-semibold mb-2">Real-time Recognition</h3>
+                        <p className="text-sm text-gray-600">
+                          Use your camera to recognize ASL signs in real-time
+                        </p>
+                      </div>
+                      <div className="p-4 border rounded-lg">
+                        <h3 className="font-semibold mb-2">Data Management</h3>
+                        <p className="text-sm text-gray-600">
+                          Manage your ASL-LEX database with advanced tools
+                        </p>
+                      </div>
                     </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
 
-            {/* Annotation Section */}
-            {videoUrl && (
+            {currentView === 'camera' && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Annotation Tools</CardTitle>
+                  <CardTitle>Camera Recognition</CardTitle>
                   <CardDescription>
-                    Create and manage video annotations
+                    Real-time ASL sign recognition using your camera
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-2 space-y-4">
-                      <AnnotationTimeline
-                        annotations={annotations}
-                        duration={videoDuration}
-                        currentTime={currentTime}
-                        onSeek={setCurrentTime}
-                      />
-                      <AnnotationControls
-                        isSegmenting={isSegmenting}
-                        onSegmentStart={() => setIsSegmenting(true)}
-                        currentSegmentDuration={0}
-                        onSegmentEnd={() => setIsSegmenting(false)}
-                        onCancelSegment={() => setIsSegmenting(false)}
-                        onCreateAnnotation={handleCreateAnnotation}
-                      />
-                    </div>
-                    <div className="lg:col-span-1">
-                      <AnnotationList
-                        annotations={annotations}
-                        onEdit={handleUpdateAnnotation}
-                        onDelete={handleDeleteAnnotation}
-                        onSelect={(annotation) => setCurrentTime(annotation.startTime)}
-                      />
-                    </div>
-                  </div>
+                  <p className="text-gray-600">Camera functionality coming soon...</p>
                 </CardContent>
               </Card>
             )}
-          </div>
-        )}
 
-        {currentView === 'camera' && (
-          <div className="space-y-8">
-            <LiveCameraAnnotator 
-              onVideoUploaded={handleVideoUploaded}
-            />
-            
-            {processedVideoData && (
-              <EnhancedVideoViewer
-                videoData={processedVideoData}
-                showAdvancedFeatures={showAdvancedFeatures}
-                onVideoProcessed={(data) => {
-                  console.log('Video processed:', data);
-                }}
-              />
+            {currentView === 'analysis' && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Analysis Dashboard</CardTitle>
+                  <CardDescription>
+                    View analytics and performance metrics
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600">Analysis dashboard coming soon...</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {currentView === 'database' && (
+              <EnhancedASLLexManager />
             )}
           </div>
-        )}
-
-        {currentView === 'analysis' && (
-          <div className="space-y-8">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Brain className="h-6 w-6 text-purple-600" />
-                  <span>Advanced Sign Spotting Analysis</span>
-                </CardTitle>
-                <CardDescription>
-                  Configure and run advanced sign language recognition analysis
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AdvancedSignSpotting
-                  videoRef={null}
-                  analysisResults={null}
-                  isAnalyzing={isAnalyzing}
-                  onAnalyze={() => {
-                    setIsAnalyzing(true);
-                    // Simulate analysis
-                    setTimeout(() => setIsAnalyzing(false), 3000);
-                  }}
-                />
-              </CardContent>
-            </Card>
-          </div>
-        )}
-      </main>
+        </div>
+      </div>
     </div>
   );
 }
