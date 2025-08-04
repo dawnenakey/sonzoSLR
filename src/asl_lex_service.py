@@ -679,6 +679,253 @@ class ASLLexDataManager:
         except Exception as e:
             logger.error(f"Error getting statistics: {str(e)}")
             return {}
+
+    def get_sign_types(self) -> List[Dict]:
+        """Get list of valid sign types for classification."""
+        try:
+            sign_types = [
+                {
+                    'value': 'isolated_sign',
+                    'label': 'Isolated Sign',
+                    'description': 'Single sign performed in isolation'
+                },
+                {
+                    'value': 'continuous_signing',
+                    'label': 'Continuous Signing',
+                    'description': 'Sign within continuous signing context'
+                },
+                {
+                    'value': 'fingerspelling',
+                    'label': 'Fingerspelling',
+                    'description': 'Manual alphabet or fingerspelling'
+                },
+                {
+                    'value': 'classifier',
+                    'label': 'Classifier',
+                    'description': 'Classifier construction or classifier predicate'
+                },
+                {
+                    'value': 'compound_sign',
+                    'label': 'Compound Sign',
+                    'description': 'Compound sign combining multiple elements'
+                },
+                {
+                    'value': 'inflected_sign',
+                    'label': 'Inflected Sign',
+                    'description': 'Sign with grammatical inflection'
+                },
+                {
+                    'value': 'directional_sign',
+                    'label': 'Directional Sign',
+                    'description': 'Sign with directional movement'
+                },
+                {
+                    'value': 'spatial_sign',
+                    'label': 'Spatial Sign',
+                    'description': 'Sign involving spatial relationships'
+                },
+                {
+                    'value': 'temporal_sign',
+                    'label': 'Temporal Sign',
+                    'description': 'Sign indicating time or temporal aspect'
+                },
+                {
+                    'value': 'manner_sign',
+                    'label': 'Manner Sign',
+                    'description': 'Sign indicating manner of action'
+                },
+                {
+                    'value': 'number_sign',
+                    'label': 'Number Sign',
+                    'description': 'Number or numeral sign'
+                },
+                {
+                    'value': 'question_sign',
+                    'label': 'Question Sign',
+                    'description': 'Question or interrogative sign'
+                },
+                {
+                    'value': 'negation_sign',
+                    'label': 'Negation Sign',
+                    'description': 'Negative or negation sign'
+                },
+                {
+                    'value': 'modality_sign',
+                    'label': 'Modality Sign',
+                    'description': 'Sign indicating modality or mood'
+                },
+                {
+                    'value': 'other',
+                    'label': 'Other',
+                    'description': 'Other type of sign not listed above'
+                }
+            ]
+            
+            return sign_types
+            
+        except Exception as e:
+            logger.error(f"Error getting sign types: {str(e)}")
+            return []
+
+    def get_custom_sign_types(self) -> List[Dict]:
+        """Get list of custom sign types."""
+        try:
+            response = self.table.scan(
+                FilterExpression='content_type = :content_type',
+                ExpressionAttributeValues={
+                    ':content_type': 'custom_sign_type'
+                }
+            )
+            
+            custom_types = []
+            for item in response['Items']:
+                custom_types.append({
+                    'value': item['value'],
+                    'label': item['label'],
+                    'description': item.get('description', ''),
+                    'is_custom': True,
+                    'created_by': item.get('created_by', 'unknown'),
+                    'created_at': item.get('created_at', '')
+                })
+            
+            return custom_types
+            
+        except Exception as e:
+            logger.error(f"Error getting custom sign types: {str(e)}")
+            return []
+
+    def get_bulk_upload_template(self) -> str:
+        """Get a CSV template for bulk upload."""
+        try:
+            # Create CSV template with all required fields
+            template_data = [
+                {
+                    'gloss': 'HELLO',
+                    'english': 'Hello',
+                    'handshape': 'B',
+                    'location': 'neutral space',
+                    'movement': 'wave',
+                    'palm_orientation': 'palm forward',
+                    'dominant_hand': 'B',
+                    'non_dominant_hand': 'B',
+                    'video_filename': 'hello.mp4',
+                    'sign_type': 'isolated_sign',
+                    'frequency': 100,
+                    'age_of_acquisition': 2.5,
+                    'iconicity': 0.8,
+                    'lexical_class': 'interjection',
+                    'tags': 'greeting,common',
+                    'notes': 'Common greeting sign',
+                    'uploaded_by': 'data_analyst'
+                },
+                {
+                    'gloss': 'THANK-YOU',
+                    'english': 'Thank you',
+                    'handshape': 'A',
+                    'location': 'chin',
+                    'movement': 'forward',
+                    'palm_orientation': 'palm in',
+                    'dominant_hand': 'A',
+                    'non_dominant_hand': 'B',
+                    'video_filename': 'thank_you.mp4',
+                    'sign_type': 'isolated_sign',
+                    'frequency': 85,
+                    'age_of_acquisition': 2.0,
+                    'iconicity': 0.6,
+                    'lexical_class': 'interjection',
+                    'tags': 'politeness,common',
+                    'notes': 'Polite expression of gratitude',
+                    'uploaded_by': 'data_analyst'
+                }
+            ]
+            
+            # Convert to CSV
+            output = io.StringIO()
+            if template_data:
+                writer = csv.DictWriter(output, fieldnames=template_data[0].keys())
+                writer.writeheader()
+                writer.writerows(template_data)
+            
+            return output.getvalue()
+            
+        except Exception as e:
+            logger.error(f"Error getting bulk upload template: {str(e)}")
+            return ""
+
+    def get_sign_type_analytics(self) -> Dict:
+        """Get analytics on sign type distribution."""
+        try:
+            signs = self.list_signs()
+            
+            # Count by sign type
+            sign_type_counts = {}
+            sign_type_details = {}
+            
+            for sign in signs:
+                sign_type = sign.sign_type or 'unknown'
+                if sign_type not in sign_type_counts:
+                    sign_type_counts[sign_type] = 0
+                    sign_type_details[sign_type] = {
+                        'count': 0,
+                        'examples': [],
+                        'avg_confidence': 0,
+                        'validation_status': {'validated': 0, 'unvalidated': 0, 'needs_review': 0}
+                    }
+                
+                sign_type_counts[sign_type] += 1
+                sign_type_details[sign_type]['count'] += 1
+                
+                # Add example (limit to 5)
+                if len(sign_type_details[sign_type]['examples']) < 5:
+                    sign_type_details[sign_type]['examples'].append({
+                        'gloss': sign.gloss,
+                        'english': sign.english,
+                        'id': sign.id
+                    })
+                
+                # Track validation status
+                validation_status = sign.validation_status or 'unvalidated'
+                sign_type_details[sign_type]['validation_status'][validation_status] += 1
+            
+            # Calculate averages and percentages
+            total_signs = len(signs)
+            sign_type_percentages = {}
+            
+            for sign_type, count in sign_type_counts.items():
+                percentage = (count / total_signs * 100) if total_signs > 0 else 0
+                sign_type_percentages[sign_type] = round(percentage, 2)
+                
+                # Calculate average confidence for this sign type
+                type_signs = [s for s in signs if s.sign_type == sign_type]
+                if type_signs:
+                    avg_confidence = sum(s.confidence_score for s in type_signs) / len(type_signs)
+                    sign_type_details[sign_type]['avg_confidence'] = round(avg_confidence, 3)
+            
+            # Get top sign types
+            top_sign_types = sorted(sign_type_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+            
+            # Get recent trends (last 30 days)
+            thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+            recent_signs = [s for s in signs if datetime.fromisoformat(s.uploaded_at) > thirty_days_ago]
+            
+            recent_sign_type_counts = {}
+            for sign in recent_signs:
+                sign_type = sign.sign_type or 'unknown'
+                recent_sign_type_counts[sign_type] = recent_sign_type_counts.get(sign_type, 0) + 1
+            
+            return {
+                'total_signs': total_signs,
+                'sign_type_counts': sign_type_counts,
+                'sign_type_percentages': sign_type_percentages,
+                'sign_type_details': sign_type_details,
+                'top_sign_types': top_sign_types,
+                'recent_trends': recent_sign_type_counts,
+                'custom_types': self.get_custom_sign_types()
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting sign type analytics: {str(e)}")
+            return {}
     
     def validate_sign(self, sign_id: str, validator: str, is_valid: bool, notes: str = '') -> bool:
         """Validate a sign by a data analyst."""
