@@ -44,7 +44,7 @@ export default function Home() {
   const [selectedCamera, setSelectedCamera] = useState(null);
   const [cameraSettings, setCameraSettings] = useState({});
   const [showDatabase, setShowDatabase] = useState(false);
-  const [showASLLex, setShowASLLex] = useState(false);
+  const [showASLLex, setShowASLLex] = useState(true);
   
   const { toast } = useToast();
 
@@ -133,6 +133,15 @@ export default function Home() {
                 <BookOpen className="h-4 w-4" />
                 {showASLLex ? 'Hide' : 'Show'} ASL-LEX
               </Button>
+              <Link to={createPageUrl("ASLLex")}>
+                <Button
+                  variant="default"
+                  className="flex items-center gap-2"
+                >
+                  <BookOpen className="h-4 w-4" />
+                  Full ASL-LEX Manager
+                </Button>
+              </Link>
             </div>
           </div>
 

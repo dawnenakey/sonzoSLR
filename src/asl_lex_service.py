@@ -1434,6 +1434,157 @@ def create_asl_lex_routes(app):
         except Exception as e:
             return jsonify({'error': str(e)}), 500
     
+    @app.route('/api/asl-lex/google-sheets/sync', methods=['POST'])
+    def sync_from_google_sheets():
+        """Sync data from Google Sheets to ASL-LEX database."""
+        try:
+            data = request.get_json()
+            if not data or 'sheet_url' not in data:
+                return jsonify({'error': 'Google Sheets URL is required'}), 400
+            
+            sheet_url = data['sheet_url']
+            
+            # Extract sheet ID from URL
+            import re
+            sheet_id_match = re.search(r'/spreadsheets/d/([a-zA-Z0-9-_]+)', sheet_url)
+            if not sheet_id_match:
+                return jsonify({'error': 'Invalid Google Sheets URL format'}), 400
+            
+            sheet_id = sheet_id_match.group(1)
+            
+            # Get Google Sheets API key from environment
+            import os
+            api_key = os.environ.get('GOOGLE_SHEETS_API_KEY')
+            if not api_key:
+                return jsonify({'error': 'Google Sheets API key not configured'}), 500
+            
+            # Fetch data from Google Sheets
+            import requests
+            sheets_api_url = f"https://sheets.googleapis.com/v4/spreadsheets/{sheet_id}/values/A1:Z1000"
+            params = {'key': api_key}
+            
+            response = requests.get(sheets_api_url, params=params)
+            if not response.ok:
+                return jsonify({'error': f'Failed to fetch Google Sheets data: {response.status_code}'}), 500
+            
+            sheet_data = response.json()
+            if 'values' not in sheet_data or not sheet_data['values']:
+                return jsonify({'error': 'No data found in Google Sheet'}), 400
+            
+            values = sheet_data['values']
+            if len(values) < 2:
+                return jsonify({'error': 'Sheet must have at least headers and one data row'}), 400
+            
+            # Parse headers and data
+            headers = values[0]
+            data_rows = values[1:]
+            
+            # Column mapping
+            column_map = {
+                'Gloss': 'gloss',
+                'English': 'english',
+                'Handshape': 'handshape',
+                'Location': 'location',
+                'Movement': 'movement',
+                'Palm Orientation': 'palm_orientation',
+                'Dominant Hand': 'dominant_hand',
+                'Non-Dominant Hand': 'non_dominant_hand',
+                'Frequency': 'frequency',
+                'Age of Acquisition': 'age_of_acquisition',
+                'Iconicity': 'iconicity',
+                'Lexical Class': 'lexical_class',
+                'Tags': 'tags',
+                'Notes': 'notes',
+                'Video URL': 'video_url',
+                'Status': 'status',
+                'Validation Status': 'validation_status',
+                'Confidence Score': 'confidence_score'
+            }
+            
+            # Create header index mapping
+            header_index = {}
+            for i, header in enumerate(headers):
+                normalized_header = header.strip()
+                if normalized_header in column_map:
+                    header_index[column_map[normalized_header]] = i
+            
+            # Convert rows to ASL-LEX format and upload
+            successful_count = 0
+            failed_count = 0
+            errors = []
+            
+            for row_index, row in enumerate(data_rows):
+                try:
+                    # Create sign data
+                    sign_data = {
+                        'uploaded_at': datetime.now().isoformat(),
+                        'uploaded_by': 'google_sheets_sync'
+                    }
+                    
+                    # Map each column
+                    for field, col_index in header_index.items():
+                        if col_index < len(row):
+                            value = row[col_index].strip()
+                            
+                            # Convert data types appropriately
+                            if field in ['frequency', 'age_of_acquisition', 'iconicity', 'confidence_score']:
+                                try:
+                                    sign_data[field] = float(value) if value else 0
+                                except ValueError:
+                                    sign_data[field] = 0
+                            elif field == 'tags':
+                                sign_data[field] = value.split(',') if value else []
+                            else:
+                                sign_data[field] = value
+                        else:
+                            # Set default values for missing columns
+                            if field in ['frequency', 'age_of_acquisition', 'iconicity', 'confidence_score']:
+                                sign_data[field] = 0
+                            elif field == 'tags':
+                                sign_data[field] = []
+                            else:
+                                sign_data[field] = ''
+                    
+                    # Validate required fields
+                    if not sign_data.get('gloss') or not sign_data.get('english'):
+                        errors.append(f"Row {row_index + 2}: Missing required fields (Gloss and English)")
+                        failed_count += 1
+                        continue
+                    
+                    # Create the sign in the database
+                    sign = manager.create_sign(sign_data)
+                    successful_count += 1
+                    
+                except Exception as e:
+                    errors.append(f"Row {row_index + 2}: {str(e)}")
+                    failed_count += 1
+            
+            return jsonify({
+                'success': True,
+                'total': len(data_rows),
+                'successful': successful_count,
+                'failed': failed_count,
+                'errors': errors,
+                'message': f'Successfully synced {successful_count} signs from Google Sheets'
+            })
+            
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/asl-lex/sync-status', methods=['GET'])
+    def get_sync_status():
+        """Get the status of Google Sheets sync operations."""
+        try:
+            # TODO: Implement sync status tracking
+            return jsonify({
+                'last_sync': None,
+                'sync_count': 0,
+                'status': 'not_configured'
+            })
+            
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
     @app.route('/api/asl-lex/sign-types', methods=['GET'])
     def get_sign_types():
         """Get list of valid sign types for classification."""

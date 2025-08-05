@@ -12,6 +12,8 @@ import Segments from "./Segments";
 
 import CameraSettings from "./CameraSettings";
 
+import ASLLex from "./ASLLex";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -27,6 +29,8 @@ const PAGES = {
     Segments: Segments,
     
     CameraSettings: CameraSettings,
+    
+    ASLLex: ASLLex,
     
 }
 
@@ -66,6 +70,8 @@ function PagesContent() {
                 <Route path="/Segments" element={<Segments />} />
                 
                 <Route path="/CameraSettings" element={<CameraSettings />} />
+                
+                <Route path="/ASLLex" element={<ASLLex />} />
                 
             </Routes>
         </Layout>
