@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { Annotation as AnnotationEntity } from '@/api/entities';
+import { AnnotationEntity } from '@/api/entities';
 import VideoPlayer from '../components/VideoPlayer';
 import AnnotationTimeline from '../components/AnnotationTimeline';
 import AnnotationControls from '../components/AnnotationControls';

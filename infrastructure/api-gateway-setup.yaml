@@ -1,0 +1,483 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'API Gateway setup for SpokHand SLR ASL-LEX service'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    Description: Environment name (dev, staging, prod)
+
+Resources:
+  # API Gateway
+  SpokHandAPI:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub 'spokhand-asl-lex-api-${Environment}'
+      Description: 'API Gateway for SpokHand SLR ASL-LEX service'
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  # Lambda Function for ASL-LEX Service
+  ASLLexLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'spokhand-asl-lex-service-${Environment}'
+      Runtime: python3.9
+      Handler: asl_lex_service.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          from datetime import datetime
+          
+          def lambda_handler(event, context):
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps({'message': 'ASL-LEX service placeholder'})
+              }
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          DYNAMODB_TABLE: !Ref DynamoDBTable
+          S3_BUCKET: !Ref S3Bucket
+
+  # Lambda Execution Role
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: ASLLexServicePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                Resource: !GetAtt DynamoDBTable.Arn
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub '${S3Bucket}/*'
+                  - !Ref S3Bucket
+
+  # DynamoDB Table
+  DynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'spokhand-asl-lex-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: content_type
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: ContentTypeIndex
+          KeySchema:
+            - AttributeName: content_type
+              KeyType: HASH
+            - AttributeName: timestamp
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  # S3 Bucket
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'spokhand-asl-lex-videos-${Environment}'
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # API Gateway Resources and Methods
+
+  # /api/asl-lex/signs
+  SignsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ParentId: !GetAtt SpokHandAPI.RootResourceId
+      PathPart: 'signs'
+
+  # GET /api/asl-lex/signs
+  GetSignsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ResourceId: !Ref SignsResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ASLLexLambdaFunction.Arn}/invocations'
+
+  # POST /api/asl-lex/signs
+  PostSignsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ResourceId: !Ref SignsResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ASLLexLambdaFunction.Arn}/invocations'
+
+  # /api/asl-lex/sign-types
+  SignTypesResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ParentId: !GetAtt SpokHandAPI.RootResourceId
+      PathPart: 'sign-types'
+
+  # GET /api/asl-lex/sign-types
+  GetSignTypesMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ResourceId: !Ref SignTypesResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ASLLexLambdaFunction.Arn}/invocations'
+
+  # POST /api/asl-lex/sign-types
+  PostSignTypesMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ResourceId: !Ref SignTypesResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ASLLexLambdaFunction.Arn}/invocations'
+
+  # /api/asl-lex/sign-types/custom
+  CustomSignTypesResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ParentId: !Ref SignTypesResource
+      PathPart: 'custom'
+
+  # GET /api/asl-lex/sign-types/custom
+  GetCustomSignTypesMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ResourceId: !Ref CustomSignTypesResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ASLLexLambdaFunction.Arn}/invocations'
+
+  # /api/asl-lex/signs/batch-update-type
+  BatchUpdateResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ParentId: !Ref SignsResource
+      PathPart: 'batch-update-type'
+
+  # POST /api/asl-lex/signs/batch-update-type
+  PostBatchUpdateMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ResourceId: !Ref BatchUpdateResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ASLLexLambdaFunction.Arn}/invocations'
+
+  # /api/asl-lex/validate-asl-sign
+  ValidateSignResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ParentId: !GetAtt SpokHandAPI.RootResourceId
+      PathPart: 'validate-asl-sign'
+
+  # POST /api/asl-lex/validate-asl-sign
+  PostValidateSignMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ResourceId: !Ref ValidateSignResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ASLLexLambdaFunction.Arn}/invocations'
+
+  # /api/asl-lex/analytics/sign-types
+  AnalyticsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ParentId: !GetAtt SpokHandAPI.RootResourceId
+      PathPart: 'analytics'
+
+  SignTypesAnalyticsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ParentId: !Ref AnalyticsResource
+      PathPart: 'sign-types'
+
+  # GET /api/asl-lex/analytics/sign-types
+  GetAnalyticsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ResourceId: !Ref SignTypesAnalyticsResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ASLLexLambdaFunction.Arn}/invocations'
+
+  # /api/asl-lex/bulk-upload
+  BulkUploadResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ParentId: !GetAtt SpokHandAPI.RootResourceId
+      PathPart: 'bulk-upload'
+
+  # POST /api/asl-lex/bulk-upload
+  PostBulkUploadMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ResourceId: !Ref BulkUploadResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ASLLexLambdaFunction.Arn}/invocations'
+
+  # /api/asl-lex/bulk-upload/jobs
+  JobsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ParentId: !Ref BulkUploadResource
+      PathPart: 'jobs'
+
+  # GET /api/asl-lex/bulk-upload/jobs
+  GetJobsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ResourceId: !Ref JobsResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ASLLexLambdaFunction.Arn}/invocations'
+
+  # /api/asl-lex/statistics
+  StatisticsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ParentId: !GetAtt SpokHandAPI.RootResourceId
+      PathPart: 'statistics'
+
+  # GET /api/asl-lex/statistics
+  GetStatisticsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ResourceId: !Ref StatisticsResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ASLLexLambdaFunction.Arn}/invocations'
+
+  # /api/asl-lex/bulk-upload/template
+  TemplateResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ParentId: !Ref BulkUploadResource
+      PathPart: 'template'
+
+  # GET /api/asl-lex/bulk-upload/template
+  GetTemplateMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ResourceId: !Ref TemplateResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ASLLexLambdaFunction.Arn}/invocations'
+
+  # /api/asl-lex/bulk-upload/jobs/{jobId}
+  JobResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ParentId: !Ref JobsResource
+      PathPart: '{jobId}'
+
+  # GET /api/asl-lex/bulk-upload/jobs/{jobId}
+  GetJobMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ResourceId: !Ref JobResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      RequestParameters:
+        method.request.path.jobId: true
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ASLLexLambdaFunction.Arn}/invocations'
+
+  # /api/asl-lex/bulk-upload/jobs/{jobId}/cancel
+  CancelResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ParentId: !Ref JobResource
+      PathPart: 'cancel'
+
+  # POST /api/asl-lex/bulk-upload/jobs/{jobId}/cancel
+  PostCancelMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ResourceId: !Ref CancelResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      RequestParameters:
+        method.request.path.jobId: true
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ASLLexLambdaFunction.Arn}/invocations'
+
+  # /api/asl-lex/upload-video-with-metadata
+  UploadVideoResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ParentId: !GetAtt SpokHandAPI.RootResourceId
+      PathPart: 'upload-video-with-metadata'
+
+  # POST /api/asl-lex/upload-video-with-metadata
+  PostUploadVideoMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      ResourceId: !Ref UploadVideoResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ASLLexLambdaFunction.Arn}/invocations'
+
+  # Lambda Permission for API Gateway
+  LambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ASLLexLambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${SpokHandAPI}/*'
+
+  # API Gateway Deployment
+  ApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - GetSignsMethod
+      - PostSignsMethod
+      - GetSignTypesMethod
+      - PostSignTypesMethod
+      - GetCustomSignTypesMethod
+      - PostBatchUpdateMethod
+      - PostValidateSignMethod
+      - GetAnalyticsMethod
+      - PostBulkUploadMethod
+      - GetJobsMethod
+      - GetStatisticsMethod
+      - GetTemplateMethod
+      - GetJobMethod
+      - PostCancelMethod
+      - PostUploadVideoMethod
+    Properties:
+      RestApiId: !Ref SpokHandAPI
+      StageName: !Ref Environment
+
+Outputs:
+  ApiGatewayUrl:
+    Description: 'API Gateway URL'
+    Value: !Sub 'https://${SpokHandAPI}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+    Export:
+      Name: !Sub '${AWS::StackName}-ApiUrl'
+
+  DynamoDBTableName:
+    Description: 'DynamoDB Table Name'
+    Value: !Ref DynamoDBTable
+    Export:
+      Name: !Sub '${AWS::StackName}-TableName'
+
+  S3BucketName:
+    Description: 'S3 Bucket Name'
+    Value: !Ref S3Bucket
+    Export:
+      Name: !Sub '${AWS::StackName}-BucketName' 

@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { Film, Home, Info, Library, ListVideo } from 'lucide-react'; // Added ListVideo
+import { Film, Home, Info, Library, ListVideo, BookOpen } from 'lucide-react'; // Added ListVideo and BookOpen
 
 export default function Layout({ children }) {
   return (
@@ -30,6 +30,13 @@ export default function Layout({ children }) {
             >
               <ListVideo className="h-4 w-4 sm:mr-1" /> {/* Changed Icon and Text */}
               <span className="hidden sm:inline">Segments</span>
+            </Link>
+            <Link 
+              to={createPageUrl("ASLLex")} 
+              className="flex items-center gap-1 text-gray-600 hover:text-indigo-600 text-sm font-medium p-2 rounded-md hover:bg-gray-100"
+            >
+              <BookOpen className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">ASL-LEX</span>
             </Link>
             <Link 
               to={createPageUrl("About")} 
