@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
-import ASLLexDataManager from '../components/ASLLexDataManager';
+
 import { googleSheetsClient } from '../api/googleSheetsClient';
 
 export default function ASLLex() {
@@ -260,7 +260,7 @@ export default function ASLLex() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ASLLexDataManager />
+    
           </CardContent>
         </Card>
       </div>

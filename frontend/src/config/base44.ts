@@ -6,19 +6,19 @@ export const BASE44_CONFIG = {
   appId: "6827319154cb6b61482ac7a4",
   
   // Add your API key here (get this from Base44 team)
-  apiKey: process.env.VITE_BASE44_API_KEY || "your-api-key-here",
+  apiKey: "your-api-key-here",
   
   // Add your auth token here (if you have one)
-  authToken: process.env.VITE_BASE44_AUTH_TOKEN || "",
+  authToken: "",
   
   // Base URL for Base44 API (get this from Base44 team)
-  baseUrl: process.env.VITE_BASE44_BASE_URL || "https://api.base44.com",
+  baseUrl: "https://api.base44.com",
   
   // Whether authentication is required
   requiresAuth: true,
   
   // Environment (development, staging, production)
-  environment: process.env.NODE_ENV || "development"
+  environment: "development"
 };
 
 // Instructions for setting up Base44 API:

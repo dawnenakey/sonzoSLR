@@ -50,7 +50,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { AnnotationEntity } from '@/api/entities';
 import { videoAPI } from '@/api/awsClient';
-import { formatTime } from '../components/timeUtils';
+
 import AnnotationDetailDialog from '../components/AnnotationDetailDialog';
 
 export default function SegmentsPage() {

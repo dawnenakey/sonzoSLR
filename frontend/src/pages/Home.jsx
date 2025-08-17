@@ -23,16 +23,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
-import ImportVideoDialog from '../components/ImportVideoDialog';
+import { ImportVideoDialog } from '../components/ImportVideoDialog';
 import { Badge } from "@/components/ui/badge";
-import { formatTime } from '../components/timeUtils';
-import Header from '../components/Header';
-import LiveCameraAnnotator from '../components/LiveCameraAnnotator';
 import EnhancedVideoViewer from '../components/EnhancedVideoViewer';
-import CameraSelector from '../components/CameraSelector';
-import VideoDatabaseViewer from '../components/VideoDatabaseViewer';
 import AdvancedSignSpotting from '../components/AdvancedSignSpotting';
-import ASLLexDataManager from '../components/ASLLexDataManager';
 import { videoAPI } from '@/api/awsClient';
 import VideoThumbnail from '../components/VideoThumbnail';
 
@@ -97,7 +91,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
+
       
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
@@ -197,23 +191,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Live Camera Section */}
-        <section className="mb-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1">
-              <CameraSelector 
-                onCameraSelect={setSelectedCamera}
-                onSettingsChange={setCameraSettings}
-                showSettings={true}
-              />
-            </div>
-            <div className="lg:col-span-2">
-              <LiveCameraAnnotator 
-                onVideoUploaded={handleVideoUploaded}
-              />
-            </div>
-          </div>
-        </section>
+        {/* Live Camera Section - Components removed, functionality available in other pages */}
 
         {/* Enhanced Video Viewer */}
         {processedVideoData && (
@@ -228,19 +206,9 @@ export default function Home() {
           </section>
         )}
         
-        {/* AWS Video Database Section */}
-        {showDatabase && (
-          <section className="mb-6">
-            <VideoDatabaseViewer onVideoSelect={handleVideoSelect} />
-          </section>
-        )}
+        {/* AWS Video Database Section - Component removed, functionality available in other pages */}
 
-        {/* ASL-LEX Data Manager Section */}
-        {showASLLex && (
-          <section className="mb-6">
-            <ASLLexDataManager />
-          </section>
-        )}
+        {/* ASL-LEX Data Manager Section - Component removed, functionality available in other pages */}
 
         {/* Advanced Sign Spotting Section - Only show when advanced features are enabled and there's video data */}
         {showAdvancedFeatures && processedVideoData && (

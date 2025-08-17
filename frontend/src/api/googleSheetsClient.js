@@ -5,8 +5,8 @@ const GOOGLE_SHEETS_API_BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
 
 class GoogleSheetsClient {
   constructor() {
-    this.apiKey = process.env.REACT_APP_GOOGLE_SHEETS_API_KEY;
-    this.baseUrl = process.env.REACT_APP_API_URL || 'https://qt8f7grhb5.execute-api.us-east-1.amazonaws.com/prod';
+    this.apiKey = import.meta.env.VITE_GOOGLE_SHEETS_API_KEY;
+    this.baseUrl = import.meta.env.VITE_API_URL || 'https://qt8f7grhb5.execute-api.us-east-1.amazonaws.com/prod';
   }
 
   // Extract sheet ID from Google Sheets URL

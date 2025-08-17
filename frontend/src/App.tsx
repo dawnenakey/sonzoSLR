@@ -55,9 +55,8 @@ import {
   Zap, Brain, Search, FileVideo, Clock, BarChart3, Home, User, Settings as SettingsIcon, Database
 } from 'lucide-react';
 import { useToast } from "./components/ui/use-toast";
-import LiveCameraAnnotator from "./components/LiveCameraAnnotator";
 import AdvancedSignSpotting from "./components/AdvancedSignSpotting";
-import EnhancedASLLexManager from './components/EnhancedASLLexManager';
+import CameraTest from "./pages/CameraTest";
 import { awsAPI } from './api/awsClient';
 
 interface Annotation {
@@ -367,6 +366,22 @@ function App() {
                   Camera
                 </Button>
                 <Button
+                  variant={currentView === 'camera-test' ? 'default' : 'ghost'}
+                  className="w-full justify-start"
+                  onClick={() => setCurrentView('camera-test')}
+                >
+                  <Video className="h-4 w-4 mr-2" />
+                  Camera Test
+                </Button>
+                <Button
+                  variant={currentView === 'camera-settings' ? 'default' : 'ghost'}
+                  className="w-full justify-start"
+                  onClick={() => setCurrentView('camera-settings')}
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Camera Settings
+                </Button>
+                <Button
                   variant={currentView === 'analysis' ? 'default' : 'ghost'}
                   className="w-full justify-start"
                   onClick={() => setCurrentView('analysis')}
@@ -381,6 +396,22 @@ function App() {
                 >
                   <Database className="h-4 w-4 mr-2" />
                   ASL-LEX Database
+                </Button>
+                <Button
+                  variant={currentView === 'troubleshoot' ? 'default' : 'ghost'}
+                  className="w-full justify-start"
+                  onClick={() => setCurrentView('troubleshoot')}
+                >
+                  <AlertCircle className="h-4 w-4 mr-2" />
+                  Troubleshoot
+                </Button>
+                <Button
+                  variant={currentView === 'settings' ? 'default' : 'ghost'}
+                  className="w-full justify-start"
+                  onClick={() => setCurrentView('settings')}
+                >
+                  <SettingsIcon className="h-4 w-4 mr-2" />
+                  Settings
                 </Button>
               </CardContent>
             </Card>
@@ -414,6 +445,58 @@ function App() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="flex gap-2">
+                        <Button
+                          variant={showAdvancedFeatures ? 'default' : 'outline'}
+                          onClick={() => setShowAdvancedFeatures(!showAdvancedFeatures)}
+                          className="flex items-center gap-2"
+                        >
+                          {showAdvancedFeatures ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          {showAdvancedFeatures ? 'Hide Advanced' : 'Show Advanced'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => setCurrentView('database')}
+                          className="flex items-center gap-2"
+                        >
+                          <Database className="h-4 w-4" />
+                          Show Database
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => setCurrentView('analysis')}
+                          className="flex items-center gap-2"
+                        >
+                          <BarChart3 className="h-4 w-4" />
+                          Show ASL-LEX
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {showAdvancedFeatures && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div className="p-4 border rounded-lg bg-blue-50">
+                          <h3 className="font-semibold mb-2 flex items-center gap-2">
+                            <Brain className="h-4 w-4 text-blue-600" />
+                            AI Advanced Features
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            Advanced AI-powered sign language recognition with I3D, ResNeXt-101, and LLM disambiguation
+                          </p>
+                        </div>
+                        <div className="p-4 border rounded-lg bg-green-50">
+                          <h3 className="font-semibold mb-2 flex items-center gap-2">
+                            <Zap className="h-4 w-4 text-green-600" />
+                            Enhanced Analysis
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            Real-time video analysis, sign spotting, and context-aware disambiguation
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="p-4 border rounded-lg">
                         <h3 className="font-semibold mb-2">Real-time Recognition</h3>
@@ -441,8 +524,46 @@ function App() {
                     Real-time ASL sign recognition using your camera
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                   <p className="text-gray-600">Camera functionality coming soon...</p>
+                  <Button 
+                    onClick={() => setCurrentView('camera-test')}
+                    className="flex items-center gap-2"
+                  >
+                    <Video className="h-4 w-4" />
+                    Test Your Camera
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {currentView === 'camera-test' && (
+              <CameraTest />
+            )}
+
+            {currentView === 'camera-settings' && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Camera Settings</CardTitle>
+                  <CardDescription>
+                    Configure camera parameters and preferences
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-semibold mb-2">Camera Configuration</h3>
+                      <p className="text-gray-600">Adjust resolution, frame rate, and other camera settings</p>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-2">Device Selection</h3>
+                      <p className="text-gray-600">Choose between BRIO, OAK-D, or other connected cameras</p>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-2">Permissions</h3>
+                      <p className="text-gray-600">Manage camera access permissions and privacy settings</p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             )}
@@ -462,7 +583,81 @@ function App() {
             )}
 
             {currentView === 'database' && (
-              <EnhancedASLLexManager />
+              <div className="text-center py-8">
+                <p className="text-gray-500">Database functionality available in other components</p>
+              </div>
+            )}
+
+            {currentView === 'troubleshoot' && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Camera Troubleshooting</CardTitle>
+                  <CardDescription>
+                    Common camera issues and solutions
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-4">
+                    <div className="p-4 border rounded-lg">
+                      <h3 className="font-semibold mb-2">BRIO Camera Issues</h3>
+                      <p className="text-sm text-gray-600 mb-2">Common problems and solutions for Logitech BRIO cameras</p>
+                      <ul className="text-sm text-gray-600 space-y-1">
+                        <li>• Check Mac privacy settings in System Preferences</li>
+                        <li>• Ensure camera is not in use by other applications</li>
+                        <li>• Try different USB ports</li>
+                        <li>• Update camera drivers</li>
+                      </ul>
+                    </div>
+                    <div className="p-4 border rounded-lg">
+                      <h3 className="font-semibold mb-2">OAK-D Camera Issues</h3>
+                      <p className="text-sm text-gray-600 mb-2">Troubleshooting for OAK-D depth cameras</p>
+                      <ul className="text-sm text-gray-600 space-y-1">
+                        <li>• Verify USB-C connection</li>
+                        <li>• Check depthai library installation</li>
+                        <li>• Ensure proper power supply</li>
+                        <li>• Test with depthai examples</li>
+                      </ul>
+                    </div>
+                    <div className="p-4 border rounded-lg">
+                      <h3 className="font-semibold mb-2">General Camera Problems</h3>
+                      <p className="text-sm text-gray-600 mb-2">Universal camera troubleshooting</p>
+                      <ul className="text-sm text-gray-600 space-y-1">
+                        <li>• Refresh browser permissions</li>
+                        <li>• Clear browser cache and cookies</li>
+                        <li>• Try different browsers</li>
+                        <li>• Check system camera permissions</li>
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {currentView === 'settings' && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Application Settings</CardTitle>
+                  <CardDescription>
+                    Configure application preferences and system settings
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-semibold mb-2">General Preferences</h3>
+                      <p className="text-gray-600">Application behavior and interface settings</p>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-2">API Configuration</h3>
+                      <p className="text-gray-600">AWS and external service settings</p>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-2">User Management</h3>
+                      <p className="text-gray-600">Account settings and permissions</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             )}
           </div>
         </div>
