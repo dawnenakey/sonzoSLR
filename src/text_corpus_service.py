@@ -14,6 +14,8 @@ from typing import List, Dict, Optional, Tuple, Any
 from dataclasses import dataclass, asdict
 from botocore.exceptions import ClientError
 import os
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -546,3 +548,19 @@ class TextCorpusService:
         except Exception as e:
             logger.error(f"Error listing exports: {e}")
             raise
+
+# Initialize Flask app
+app = Flask(__name__)
+CORS(app)
+
+# Register routes
+app.add_url_rule('/api/text-corpus/health', 'health', health_check, methods=['GET'])
+app.add_url_rule('/api/text-corpus/upload', 'upload', upload_text, methods=['POST'])
+app.add_url_rule('/api/text-corpus/process', 'process', process_text, methods=['POST'])
+app.add_url_rule('/api/text-corpus/export', 'export', export_corpus, methods=['POST'])
+app.add_url_rule('/api/text-corpus/exports', 'exports', list_exports, methods=['GET'])
+app.add_url_rule('/api/text-corpus/download/<export_id>', 'download', download_export, methods=['GET'])
+
+if __name__ == '__main__':
+    print("🚀 Starting Text Corpus Service on port 5002...")
+    app.run(host='0.0.0.0', port=5002, debug=True)

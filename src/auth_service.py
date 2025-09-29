@@ -12,6 +12,8 @@ import boto3
 from botocore.exceptions import ClientError
 import json
 import os
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 
 # Configuration
 JWT_SECRET = os.environ.get('JWT_SECRET', 'your-secret-key-change-in-production')
@@ -299,4 +301,21 @@ class RateLimiter:
         return False
 
 # Global rate limiter instance
-rate_limiter = RateLimiter() 
+rate_limiter = RateLimiter()
+
+# Initialize Flask app
+app = Flask(__name__)
+CORS(app)
+
+# Register routes
+app.add_url_rule('/api/auth/register', 'register', register, methods=['POST'])
+app.add_url_rule('/api/auth/login', 'login', login, methods=['POST'])
+app.add_url_rule('/api/auth/logout', 'logout', logout, methods=['POST'])
+app.add_url_rule('/api/auth/refresh', 'refresh', refresh_token, methods=['POST'])
+app.add_url_rule('/api/auth/verify', 'verify', verify_token, methods=['POST'])
+app.add_url_rule('/api/auth/profile', 'profile', get_profile, methods=['GET'])
+app.add_url_rule('/api/auth/profile', 'update_profile', update_profile, methods=['PUT'])
+app.add_url_rule('/api/auth/health', 'health', health_check, methods=['GET'])
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5001, debug=True) 
