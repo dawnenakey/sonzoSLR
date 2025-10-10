@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Brain, Search, Zap, Play, Pause, RotateCcw, Download, Upload, Settings } from 'lucide-react';
+import { Brain, Search, Zap, Play, Pause, RotateCcw, Download, Upload, Settings, AlertCircle } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 
 export default function AdvancedSignSpotting({ videoId, onAnnotationsGenerated }) {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -12,6 +13,9 @@ export default function AdvancedSignSpotting({ videoId, onAnnotationsGenerated }
   const [vocabularySize, setVocabularySize] = useState(1000);
   const [beamWidth, setBeamWidth] = useState(5);
   const [alpha, setAlpha] = useState(0.9);
+  const [error, setError] = useState(null);
+  const [analysisResults, setAnalysisResults] = useState(null);
+  const { toast } = useToast();
 
   // Processing stages based on the paper's two-stage architecture
   const processingStages = [
@@ -24,115 +28,118 @@ export default function AdvancedSignSpotting({ videoId, onAnnotationsGenerated }
     'Generating final annotations...'
   ];
 
-  const simulateAdvancedSignSpotting = async () => {
+  const performAdvancedSignSpotting = async () => {
+    if (!videoId) {
+      setError('No video ID provided');
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No video ID provided for analysis"
+      });
+      return;
+    }
+
     setIsProcessing(true);
+    setError(null);
     setDetectedSigns([]);
     setDisambiguationResults([]);
     setConfidence(0);
 
-    // Simulate the two-stage process described in the paper
-    for (let i = 0; i < processingStages.length; i++) {
-      setProcessingStage(processingStages[i]);
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Simulate confidence building
-      setConfidence((i + 1) * 0.15);
+    try {
+      // Show processing stages
+      for (let i = 0; i < processingStages.length; i++) {
+        setProcessingStage(processingStages[i]);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        setConfidence((i + 1) * 0.15);
+      }
+
+      // Call the AI service API
+      const response = await fetch('/api/ai/analyze-video', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          video_id: videoId,
+          fusion_strategy: fusionStrategy,
+          vocabulary_size: vocabularySize,
+          beam_width: beamWidth,
+          alpha: alpha,
+          window_size: 16,
+          stride: 1
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Analysis failed');
+      }
+
+      const results = await response.json();
+      setAnalysisResults(results);
+
+      // Process detected signs
+      const processedSigns = results.segments.map((segment, index) => ({
+        id: segment.id || `${videoId}_${index}`,
+        startTime: segment.start_time,
+        endTime: segment.end_time,
+        sign: segment.sign,
+        confidence: segment.confidence,
+        handShape: segment.hand_shape,
+        location: segment.location,
+        features: segment.features,
+        alternatives: segment.alternatives,
+        llmScore: segment.llm_score
+      }));
+
+      setDetectedSigns(processedSigns);
+
+      // Process disambiguation results
+      const processedDisambiguation = results.segments.map(segment => ({
+        originalSign: segment.sign,
+        alternatives: segment.alternatives,
+        llmScore: segment.llm_score,
+        context: `Detected at ${segment.start_time}s`,
+        finalChoice: segment.sign,
+        beamSearchPath: segment.alternatives.slice(0, 3)
+      }));
+
+      setDisambiguationResults(processedDisambiguation);
+
+      // Generate annotations for the parent component
+      const annotations = processedSigns.map(sign => ({
+        id: sign.id,
+        videoId,
+        startTime: sign.startTime,
+        endTime: sign.endTime,
+        label: sign.sign,
+        confidence: sign.confidence,
+        handShape: sign.handShape,
+        location: sign.location,
+        notes: `AI-detected using ${fusionStrategy} fusion. LLM disambiguation applied with beam width ${beamWidth}.`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }));
+
+      onAnnotationsGenerated(annotations);
+
+      toast({
+        title: "Analysis Complete",
+        description: `Detected ${processedSigns.length} sign segments using ${fusionStrategy} fusion`
+      });
+
+    } catch (err) {
+      console.error('Advanced sign spotting failed:', err);
+      setError(err.message);
+      toast({
+        variant: "destructive",
+        title: "Analysis Failed",
+        description: err.message || "Could not complete advanced analysis"
+      });
+    } finally {
+      setIsProcessing(false);
+      setProcessingStage('');
     }
-
-    // Mock results based on the paper's approach
-    const mockDetectedSigns = [
-      {
-        id: 1,
-        startTime: 1.2,
-        endTime: 2.1,
-        sign: 'HELLO',
-        confidence: 0.85,
-        handShape: 'B',
-        location: 'neutral space',
-        features: {
-          i3d: [0.23, 0.45, 0.67, 0.89, 0.12, 0.34, 0.56, 0.78, 0.90, 0.12],
-          lh: [0.34, 0.56, 0.78, 0.90, 0.12, 0.34, 0.56, 0.78, 0.90, 0.12],
-          rh: [0.45, 0.67, 0.89, 0.12, 0.34, 0.56, 0.78, 0.90, 0.12, 0.34]
-        }
-      },
-      {
-        id: 2,
-        startTime: 2.5,
-        endTime: 3.8,
-        sign: 'WORLD',
-        confidence: 0.78,
-        handShape: 'W',
-        location: 'neutral space',
-        features: {
-          i3d: [0.45, 0.67, 0.89, 0.12, 0.34, 0.56, 0.78, 0.90, 0.12, 0.34],
-          lh: [0.56, 0.78, 0.90, 0.12, 0.34, 0.56, 0.78, 0.90, 0.12, 0.34],
-          rh: [0.67, 0.89, 0.12, 0.34, 0.56, 0.78, 0.90, 0.12, 0.34, 0.56]
-        }
-      },
-      {
-        id: 3,
-        startTime: 4.2,
-        endTime: 5.5,
-        sign: 'TOGETHER',
-        confidence: 0.92,
-        handShape: 'C',
-        location: 'neutral space',
-        features: {
-          i3d: [0.67, 0.89, 0.12, 0.34, 0.56, 0.78, 0.90, 0.12, 0.34, 0.56],
-          lh: [0.78, 0.90, 0.12, 0.34, 0.56, 0.78, 0.90, 0.12, 0.34, 0.56],
-          rh: [0.89, 0.12, 0.34, 0.56, 0.78, 0.90, 0.12, 0.34, 0.56, 0.78]
-        }
-      }
-    ];
-
-    const mockDisambiguationResults = [
-      {
-        originalSign: 'HELLO',
-        alternatives: ['HELLO', 'HI', 'GREETING'],
-        llmScore: 0.95,
-        context: 'Beginning of sentence',
-        finalChoice: 'HELLO',
-        beamSearchPath: ['HELLO', 'WORLD', 'TOGETHER']
-      },
-      {
-        originalSign: 'WORLD',
-        alternatives: ['WORLD', 'EARTH', 'PLANET'],
-        llmScore: 0.87,
-        context: 'Following "HELLO"',
-        finalChoice: 'WORLD',
-        beamSearchPath: ['HELLO', 'WORLD', 'TOGETHER']
-      },
-      {
-        originalSign: 'TOGETHER',
-        alternatives: ['TOGETHER', 'UNITED', 'COMBINED'],
-        llmScore: 0.93,
-        context: 'End of phrase',
-        finalChoice: 'TOGETHER',
-        beamSearchPath: ['HELLO', 'WORLD', 'TOGETHER']
-      }
-    ];
-
-    setDetectedSigns(mockDetectedSigns);
-    setDisambiguationResults(mockDisambiguationResults);
-    setIsProcessing(false);
-    setProcessingStage('');
-
-    // Generate annotations for the parent component
-    const annotations = mockDetectedSigns.map(sign => ({
-      id: sign.id,
-      videoId,
-      startTime: sign.startTime,
-      endTime: sign.endTime,
-      label: sign.sign,
-      confidence: sign.confidence,
-      handShape: sign.handShape,
-      location: sign.location,
-      notes: `AI-detected using ${fusionStrategy} fusion. LLM disambiguation applied with beam width ${beamWidth}.`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }));
-
-    onAnnotationsGenerated(annotations);
   };
 
   const getFusionStrategyDescription = (strategy) => {
@@ -145,6 +152,59 @@ export default function AdvancedSignSpotting({ videoId, onAnnotationsGenerated }
         return 'S_Ensemble = α * S_Mid + (1-α) * S_I3D (Equation 5)';
       default:
         return '';
+    }
+  };
+
+  const exportResults = async () => {
+    if (!videoId) return;
+    
+    try {
+      const response = await fetch(`/api/ai/export-results/${videoId}`);
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sign_analysis_${videoId}_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: "Export Complete",
+        description: "Analysis results exported successfully"
+      });
+    } catch (err) {
+      console.error('Export failed:', err);
+      toast({
+        variant: "destructive",
+        title: "Export Failed",
+        description: "Could not export analysis results"
+      });
+    }
+  };
+
+  const saveToDatabase = async () => {
+    if (!analysisResults) return;
+    
+    try {
+      // The results are already saved to the database during analysis
+      // This is just a confirmation action
+      toast({
+        title: "Saved to Database",
+        description: "Analysis results are already saved to the database"
+      });
+    } catch (err) {
+      console.error('Save failed:', err);
+      toast({
+        variant: "destructive",
+        title: "Save Failed",
+        description: "Could not save to database"
+      });
     }
   };
 
@@ -254,8 +314,8 @@ export default function AdvancedSignSpotting({ videoId, onAnnotationsGenerated }
 
       <div className="mb-6">
         <button
-          onClick={simulateAdvancedSignSpotting}
-          disabled={isProcessing}
+          onClick={performAdvancedSignSpotting}
+          disabled={isProcessing || !videoId}
           className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isProcessing ? (
@@ -270,6 +330,16 @@ export default function AdvancedSignSpotting({ videoId, onAnnotationsGenerated }
             </>
           )}
         </button>
+        
+        {error && (
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+            <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+            <div>
+              <h4 className="font-medium text-red-800">Analysis Error</h4>
+              <p className="text-sm text-red-700 mt-1">{error}</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {isProcessing && (
@@ -359,11 +429,17 @@ export default function AdvancedSignSpotting({ videoId, onAnnotationsGenerated }
 
       {detectedSigns.length > 0 && (
         <div className="mt-6 flex gap-3">
-          <button className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+          <button 
+            onClick={exportResults}
+            className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+          >
             <Download className="h-4 w-4" />
             Export Results
           </button>
-          <button className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+          <button 
+            onClick={saveToDatabase}
+            className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+          >
             <Upload className="h-4 w-4" />
             Save to Database
           </button>

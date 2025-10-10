@@ -82,9 +82,29 @@ export default function CameraTest() {
         results.frameRate = 'warning';
       }
       
-      // Test 5: Camera type detection (BRIO-like)
+      // Test 5: Camera type detection
+      const deviceLabel = videoTrack.label || '';
+      const userAgent = navigator.userAgent;
+      const isBRIO = /brio|logitech.*brio/i.test(deviceLabel);
+      const isOAK = /oak|depthai|luxonis/i.test(deviceLabel);
+      const isIntel = /intel.*realsense|realsense/i.test(deviceLabel);
+      const isiPhone = /iPhone|iPad|iPod/i.test(userAgent);
+      const isAndroid = /Android/i.test(userAgent);
       const isHighQuality = settings.width >= 1920 && settings.height >= 1080 && settings.frameRate >= 30;
-      results.cameraType = isHighQuality ? 'high_quality' : 'standard';
+      
+      if (isBRIO) {
+        results.cameraType = 'brio';
+      } else if (isOAK) {
+        results.cameraType = 'oak';
+      } else if (isIntel) {
+        results.cameraType = 'intel';
+      } else if (isiPhone) {
+        results.cameraType = 'iphone';
+      } else if (isAndroid) {
+        results.cameraType = 'android';
+      } else {
+        results.cameraType = isHighQuality ? 'high_quality' : 'standard';
+      }
       
     } catch (err) {
       results.error = err.message;

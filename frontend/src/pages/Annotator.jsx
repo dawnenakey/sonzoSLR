@@ -34,7 +34,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { AnimatePresence, motion } from "framer-motion";
-
 import { videoAPI } from '@/api/awsClient';
 
 export default function Annotator() {

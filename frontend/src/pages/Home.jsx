@@ -27,8 +27,9 @@ import { ImportVideoDialog } from '../components/ImportVideoDialog';
 import { Badge } from "@/components/ui/badge";
 import EnhancedVideoViewer from '../components/EnhancedVideoViewer';
 import AdvancedSignSpotting from '../components/AdvancedSignSpotting';
-import { videoAPI } from '@/api/awsClient';
+import { videoAPI, sessionAPI } from '@/api/awsClient';
 import VideoThumbnail from '../components/VideoThumbnail';
+import CameraSelector from '../components/CameraSelector';
 
 export default function Home() {
   const [videos, setVideos] = useState([]);
@@ -63,25 +64,37 @@ export default function Home() {
     }
   };
 
-  const handleVideoUploaded = (videoData) => {
-    setProcessedVideoData(videoData);
-    
-    // Add the uploaded video to the videos list
-    const newVideo = {
-      id: `uploaded-${Date.now()}`,
-      filename: videoData.file?.name || 'Uploaded Video',
-      size: videoData.file?.size || 0,
-      status: 'ready',
-      uploadedAt: new Date().toISOString(),
-      url: videoData.url
-    };
-    
-    setVideos(prev => [...prev, newVideo]);
-    
-    toast({
-      title: "Video Processed",
-      description: "Video has been processed and is ready for analysis"
-    });
+  const handleVideoUpload = async (file) => {
+    try {
+      setIsLoading(true);
+      
+      // Create a session first
+      const session = await sessionAPI.create({
+        name: `Session ${new Date().toLocaleDateString()}`,
+        description: `Video upload session - ${file.name}`
+      });
+      
+      // Upload video to the session
+      const video = await sessionAPI.uploadVideo(session.id, file);
+      
+      // Add to local videos list
+      setVideos(prev => [...prev, video]);
+      
+      toast({
+        title: "Video Uploaded Successfully",
+        description: `${file.name} has been uploaded and is ready for analysis`
+      });
+      
+    } catch (error) {
+      console.error('Error uploading video:', error);
+      toast({
+        variant: "destructive",
+        title: "Upload Failed",
+        description: `Failed to upload ${file.name}: ${error.message}`
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleVideoSelect = (video) => {
@@ -191,7 +204,28 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Live Camera Section - Components removed, functionality available in other pages */}
+        {/* Live Camera Section */}
+        <section className="mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Camera className="h-6 w-6 text-blue-600" />
+                Camera Setup
+              </CardTitle>
+              <CardDescription>
+                Configure your camera for optimal sign language recording
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CameraSelector 
+                onCameraSelect={setSelectedCamera}
+                onSettingsChange={setCameraSettings}
+                showSettings={true}
+                autoStart={false}
+              />
+            </CardContent>
+          </Card>
+        </section>
 
         {/* Enhanced Video Viewer */}
         {processedVideoData && (
@@ -228,10 +262,7 @@ export default function Home() {
         <section className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900">Video Library</h2>
-            <ImportVideoDialog onFileSelect={(file) => {
-              // Handle file selection
-              console.log('File selected:', file);
-            }} />
+            <ImportVideoDialog onFileSelect={handleVideoUpload} disabled={isLoading} />
           </div>
           
           {isLoading ? (
@@ -249,10 +280,7 @@ export default function Home() {
               <Film className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No videos yet</h3>
               <p className="text-gray-600 mb-4">Upload your first video to get started</p>
-              <ImportVideoDialog onFileSelect={(file) => {
-                // Handle file selection
-                console.log('File selected:', file);
-              }} />
+              <ImportVideoDialog onFileSelect={handleVideoUpload} disabled={isLoading} />
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

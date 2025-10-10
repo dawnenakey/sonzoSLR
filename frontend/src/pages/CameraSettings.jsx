@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Camera, Video, Settings, CheckCircle, AlertCircle, ArrowLeft, Save, RotateCcw } from 'lucide-react';
+import { Camera, Video, Settings, CheckCircle, AlertCircle, ArrowLeft, Save, RotateCcw, Brain, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import CameraSelector from '@/components/CameraSelector';
+import CameraTest from './CameraTest';
 
 
 export default function CameraSettings() {
@@ -25,7 +27,8 @@ export default function CameraSettings() {
 
   const handleCameraSelect = (camera) => {
     setSelectedCamera(camera);
-    // Auto-optimize settings for BRIO
+    
+    // Auto-optimize settings based on camera type
     if (camera?.isBRIO) {
       setCameraSettings({
         resolution: '1920x1080',
@@ -39,6 +42,48 @@ export default function CameraSettings() {
         lowLightCompensation: false,
         noiseReduction: true,
         stabilization: false
+      });
+    } else if (camera?.isOAK) {
+      setCameraSettings({
+        resolution: '1920x1080',
+        frameRate: 30,
+        quality: 'high'
+      });
+      setAdvancedSettings({
+        autoExposure: true,
+        autoWhiteBalance: true,
+        autoFocus: true,
+        lowLightCompensation: true,
+        noiseReduction: true,
+        stabilization: false
+      });
+    } else if (camera?.type === 'iphone' || camera?.type === 'android') {
+      setCameraSettings({
+        resolution: '1920x1080',
+        frameRate: 30,
+        quality: 'high'
+      });
+      setAdvancedSettings({
+        autoExposure: true,
+        autoWhiteBalance: true,
+        autoFocus: true,
+        lowLightCompensation: true,
+        noiseReduction: true,
+        stabilization: true
+      });
+    } else {
+      setCameraSettings({
+        resolution: '1280x720',
+        frameRate: 30,
+        quality: 'medium'
+      });
+      setAdvancedSettings({
+        autoExposure: true,
+        autoWhiteBalance: true,
+        autoFocus: true,
+        lowLightCompensation: true,
+        noiseReduction: true,
+        stabilization: true
       });
     }
   };
@@ -65,6 +110,34 @@ export default function CameraSettings() {
         lowLightCompensation: false,
         noiseReduction: true,
         stabilization: false
+      });
+    } else if (selectedCamera?.isOAK) {
+      setCameraSettings({
+        resolution: '1920x1080',
+        frameRate: 30,
+        quality: 'high'
+      });
+      setAdvancedSettings({
+        autoExposure: true,
+        autoWhiteBalance: true,
+        autoFocus: true,
+        lowLightCompensation: true,
+        noiseReduction: true,
+        stabilization: false
+      });
+    } else if (selectedCamera?.type === 'iphone' || selectedCamera?.type === 'android') {
+      setCameraSettings({
+        resolution: '1920x1080',
+        frameRate: 30,
+        quality: 'high'
+      });
+      setAdvancedSettings({
+        autoExposure: true,
+        autoWhiteBalance: true,
+        autoFocus: true,
+        lowLightCompensation: true,
+        noiseReduction: true,
+        stabilization: true
       });
     } else {
       setCameraSettings({
@@ -122,9 +195,17 @@ export default function CameraSettings() {
           </div>
         </div>
 
+        {/* Camera Selector */}
+        <div className="mb-6">
+          <CameraSelector 
+            onCameraSelect={handleCameraSelect}
+            onSettingsChange={handleSettingsChange}
+            showSettings={true}
+            autoStart={false}
+          />
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-
           {/* Advanced Settings */}
           <div className="lg:col-span-2 space-y-6">
             {/* Current Camera Info */}
@@ -139,7 +220,11 @@ export default function CameraSettings() {
                     {selectedCamera.isBRIO 
                       ? "BRIO camera detected - optimized for high-quality recording"
                       : selectedCamera.isOAK 
-                      ? "OAK camera detected - optimized for AI processing"
+                      ? "OAK-D camera detected - optimized for AI processing and depth sensing"
+                      : selectedCamera.isIntel
+                      ? "Intel RealSense camera detected - optimized for depth and AI processing"
+                      : selectedCamera.isKinect
+                      ? "Kinect camera detected - optimized for motion tracking"
                       : "Standard camera - using default settings"
                     }
                   </CardDescription>
@@ -246,7 +331,7 @@ export default function CameraSettings() {
               </CardContent>
             </Card>
 
-            {/* BRIO Optimization Tips */}
+            {/* Camera-specific Optimization Tips */}
             {selectedCamera?.isBRIO && (
               <Card className="border-blue-200 bg-blue-50">
                 <CardHeader>
@@ -261,6 +346,69 @@ export default function CameraSettings() {
                     <p>• Auto exposure and focus work best for sign language recording</p>
                     <p>• Noise reduction is recommended for clean hand tracking</p>
                     <p>• Disable stabilization for more accurate hand movement capture</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {selectedCamera?.isOAK && (
+              <Card className="border-purple-200 bg-purple-50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-purple-800">
+                    <Brain className="h-5 w-5" />
+                    OAK-D Optimization Tips
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 text-sm text-purple-700">
+                    <p>• OAK-D cameras provide depth sensing and AI processing capabilities</p>
+                    <p>• Optimal for 1080p at 30fps for AI analysis and depth processing</p>
+                    <p>• Depth data enhances hand tracking accuracy significantly</p>
+                    <p>• Ensure adequate lighting for depth sensor operation</p>
+                    <p>• Low light compensation helps with depth sensor performance</p>
+                    <p>• Disable stabilization to preserve depth data accuracy</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {selectedCamera?.isIntel && (
+              <Card className="border-green-200 bg-green-50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-green-800">
+                    <Zap className="h-5 w-5" />
+                    Intel RealSense Optimization Tips
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 text-sm text-green-700">
+                    <p>• Intel RealSense cameras provide depth and RGB data</p>
+                    <p>• Optimal for 720p at 30fps for balanced performance</p>
+                    <p>• Depth data improves hand tracking accuracy</p>
+                    <p>• Ensure good lighting for both RGB and depth sensors</p>
+                    <p>• Use low light compensation for better depth sensing</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {(selectedCamera?.type === 'iphone' || selectedCamera?.type === 'android') && (
+              <Card className="border-gray-200 bg-gray-50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-gray-800">
+                    <Camera className="h-5 w-5" />
+                    Mobile Camera Optimization Tips
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 text-sm text-gray-700">
+                    <p>• Mobile cameras provide excellent quality for sign language recording</p>
+                    <p>• Use front-facing camera for self-recording or back camera for others</p>
+                    <p>• Ensure good lighting - mobile cameras work well in various conditions</p>
+                    <p>• Hold device steady or use a tripod for best results</p>
+                    <p>• Use landscape orientation for better hand visibility</p>
+                    <p>• Enable stabilization for smoother video recording</p>
+                    <p>• Keep hands within frame and well-lit for best recognition</p>
                   </div>
                 </CardContent>
               </Card>
