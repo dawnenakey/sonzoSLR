@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Film, Plus, ArrowRight, Play, Calendar, Clock, Trash2, MoreVertical, Edit2, AlertCircle, UserCircle, Download, Share2, Camera, Upload, EyeOff, Eye, Loader2, Database, BookOpen } from 'lucide-react'; // Added Database and BookOpen
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AnnotationEntity } from '@/api/entities';
 import { Skeleton } from "@/components/ui/skeleton";
 import { 

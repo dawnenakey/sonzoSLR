@@ -148,6 +148,39 @@ export default function CameraSelector({
     return settings[cameraType] || settings.webcam;
   };
 
+  // Request camera permission explicitly
+  const requestCameraPermission = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Request camera access
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      
+      // Stop the stream immediately (we just needed permission)
+      stream.getTracks().forEach(track => track.stop());
+      
+      // Now try to load cameras again
+      await loadCameras();
+      
+    } catch (err) {
+      console.error('Error requesting camera permission:', err);
+      let errorMessage = 'Failed to access camera. ';
+      
+      if (err.name === 'NotAllowedError') {
+        errorMessage += 'Please allow camera permissions in your browser settings.';
+      } else if (err.name === 'NotFoundError') {
+        errorMessage += 'No camera found. Please check your camera connection.';
+      } else {
+        errorMessage += err.message;
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Load available cameras
   const loadCameras = async () => {
     try {
@@ -159,35 +192,46 @@ export default function CameraSelector({
         throw new Error('Camera access not supported in this browser');
       }
 
+      // Request camera permissions first (this is required for enumerateDevices to return device labels)
+      try {
+        await navigator.mediaDevices.getUserMedia({ video: true });
+      } catch (permError) {
+        console.warn('Camera permission denied, but continuing with device enumeration:', permError);
+      }
+
       // Get all media devices
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter(device => device.kind === 'videoinput');
 
+      console.log('Found video devices:', videoDevices);
+
       if (videoDevices.length === 0) {
-        throw new Error('No cameras found');
+        throw new Error('No cameras found. Please check your camera connection and browser permissions.');
       }
 
       // Process camera information
-      const cameraList = videoDevices.map(device => {
-        const cameraType = detectCameraType(device.label);
-        const optimalSettings = getOptimalSettings(cameraType);
-        
-        return {
-          deviceId: device.deviceId,
-          label: device.label || `Camera ${device.deviceId.slice(0, 8)}`,
-          type: cameraType,
-          isBRIO: cameraType === 'brio',
-          isOAK: cameraType === 'oak',
-          isIntel: cameraType === 'intel',
-          isKinect: cameraType === 'kinect',
-          optimalSettings,
-          capabilities: {
-            maxWidth: 1920,
-            maxHeight: 1080,
-            maxFrameRate: cameraType === 'brio' ? 60 : 30
-          }
-        };
-      });
+      const cameraList = videoDevices
+        .filter(device => device.deviceId && device.deviceId.trim() !== '') // Filter out empty deviceId
+        .map(device => {
+          const cameraType = detectCameraType(device.label);
+          const optimalSettings = getOptimalSettings(cameraType);
+          
+          return {
+            deviceId: device.deviceId,
+            label: device.label || `Camera ${device.deviceId.slice(0, 8)}`,
+            type: cameraType,
+            isBRIO: cameraType === 'brio',
+            isOAK: cameraType === 'oak',
+            isIntel: cameraType === 'intel',
+            isKinect: cameraType === 'kinect',
+            optimalSettings,
+            capabilities: {
+              maxWidth: 1920,
+              maxHeight: 1080,
+              maxFrameRate: cameraType === 'brio' ? 60 : 30
+            }
+          };
+        });
 
       setCameras(cameraList);
 
@@ -207,7 +251,20 @@ export default function CameraSelector({
 
     } catch (err) {
       console.error('Error loading cameras:', err);
-      setError(err.message);
+      let errorMessage = err.message;
+      
+      // Provide more helpful error messages
+      if (err.name === 'NotAllowedError') {
+        errorMessage = 'Camera access denied. Please allow camera permissions and try again.';
+      } else if (err.name === 'NotFoundError') {
+        errorMessage = 'No camera found. Please check your camera connection.';
+      } else if (err.name === 'NotSupportedError') {
+        errorMessage = 'Camera access not supported in this browser.';
+      } else if (err.name === 'NotReadableError') {
+        errorMessage = 'Camera is being used by another application.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -431,10 +488,19 @@ export default function CameraSelector({
             <div className="text-center py-8">
               <Camera className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-600 mb-4">No cameras detected</p>
-              <Button onClick={loadCameras} variant="outline">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Retry
-              </Button>
+              <p className="text-sm text-gray-500 mb-4">
+                Make sure your camera is connected and browser permissions are granted.
+              </p>
+              <div className="space-x-2">
+                <Button onClick={loadCameras} variant="outline">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Retry
+                </Button>
+                <Button onClick={requestCameraPermission} variant="default">
+                  <Camera className="h-4 w-4 mr-2" />
+                  Request Camera Access
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
