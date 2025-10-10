@@ -182,7 +182,7 @@ def handle_generate_upload_url(path_params, cors_headers):
         presigned_url = s3_client.generate_presigned_url(
             'put_object',
             Params={
-                'Bucket': os.environ.get('S3_BUCKET_NAME', 'spokhand-videos'),
+                'Bucket': os.environ.get('S3_BUCKET_NAME', 'spokhand-data'),
                 'Key': f"videos/{session_id}/{video_id}.mp4",
                 'ContentType': 'video/mp4'
             },
@@ -249,7 +249,7 @@ def handle_get_videos(cors_headers):
                     'duration': item.get('duration', 0),
                     'uploadedAt': item.get('createdAt', item.get('timestamp', '')),
                     'status': item.get('status', 'ready'),
-                    'url': f"https://{os.environ.get('S3_BUCKET_NAME', 'spokhand-videos')}.s3.amazonaws.com/videos/{item.get('session_id', '')}/{item.get('video_id', '')}.mp4"
+                    'url': f"https://{os.environ.get('S3_BUCKET_NAME', 'spokhand-data')}.s3.amazonaws.com/videos/{item.get('session_id', '')}/{item.get('video_id', '')}.mp4"
                 }
                 videos.append(video)
         
@@ -303,7 +303,7 @@ def handle_get_video(path_params, cors_headers):
             'duration': item.get('duration', 0),
             'uploadedAt': item.get('createdAt', item.get('timestamp', '')),
             'status': item.get('status', 'ready'),
-            'url': f"https://{os.environ.get('S3_BUCKET_NAME', 'spokhand-videos')}.s3.amazonaws.com/videos/{item.get('session_id', '')}/{item.get('video_id', '')}.mp4"
+            'url': f"https://{os.environ.get('S3_BUCKET_NAME', 'spokhand-data')}.s3.amazonaws.com/videos/{item.get('session_id', '')}/{item.get('video_id', '')}.mp4"
         }
         
         return create_response(200, {
