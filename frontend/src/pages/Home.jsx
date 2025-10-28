@@ -31,6 +31,7 @@ import AdvancedSignSpotting from '../components/AdvancedSignSpotting';
 import { videoAPI, sessionAPI } from '@/api/awsClient';
 import VideoThumbnail from '../components/VideoThumbnail';
 import CameraSelector from '../components/CameraSelector';
+import ProcessBar from '../components/ProcessBar';
 
 export default function Home() {
   const [videos, setVideos] = useState([]);
@@ -41,6 +42,7 @@ export default function Home() {
   const [cameraSettings, setCameraSettings] = useState({});
   const [showDatabase, setShowDatabase] = useState(false);
   const [showASLLex, setShowASLLex] = useState(true);
+  const [currentStep, setCurrentStep] = useState('record'); // Track current workflow step
   
   const { toast } = useToast();
 
@@ -152,6 +154,18 @@ export default function Home() {
               </Link>
             </div>
           </div>
+
+          {/* Process Bar - Workflow Steps */}
+          <ProcessBar 
+            currentStep={currentStep} 
+            onStepClick={(step) => {
+              setCurrentStep(step);
+              toast({
+                title: "Step Changed",
+                description: `Switched to ${step} step`
+              });
+            }} 
+          />
 
           {/* Quick Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
