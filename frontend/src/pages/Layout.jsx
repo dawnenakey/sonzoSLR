@@ -10,9 +10,7 @@ export default function Layout({ children }) {
       <header className="bg-white border-b shadow-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <Link to={createPageUrl("Home")} className="flex items-center gap-2">
-            <div className="bg-indigo-600 text-white p-2 rounded-lg">
-              <Film className="h-5 w-5" />
-            </div>
+            <img src="/spokhand-icon.svg" alt="SpokHand Logo" className="h-8 w-8" />
             <h1 className="text-xl font-semibold text-gray-900">SPOKHAND SIGNCUT</h1>
           </Link>
           

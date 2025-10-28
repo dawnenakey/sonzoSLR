@@ -331,12 +331,12 @@ function App() {
         <header className="mb-8">
           <div className="flex items-center gap-4 mb-4">
             {/* SpokHand Logo */}
-            <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg shadow-md">
-              <span className="text-white font-bold text-lg">SH</span>
-            </div>
-            <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">SpokHand SLR</h1>
-              <p className="text-gray-600">Advanced Sign Language Recognition System</p>
+            <div className="flex items-center gap-3">
+              <img src="/spokhand-icon.svg" alt="SpokHand Logo" className="w-16 h-16" />
+              <div>
+                <h1 className="text-4xl font-bold text-gray-900 mb-2">SPOKHAND SIGNCUT</h1>
+                <p className="text-gray-600">Advanced Sign Language Recognition System</p>
+              </div>
             </div>
           </div>
         </header>

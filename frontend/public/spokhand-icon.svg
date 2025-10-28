@@ -1,0 +1,15 @@
+<svg width="48" height="48" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Simplified icon version (just hand with play button, no text) -->
+  <defs>
+    <style>
+      .hand-path { fill: #ffffff; }
+    </style>
+  </defs>
+  
+  <!-- Hand shape -->
+  <path class="hand-path" d="M 40 20 Q 25 15 15 25 Q 10 35 15 50 L 20 70 Q 25 85 35 95 Q 45 105 60 105 Q 75 105 85 98 L 95 85 Q 100 75 100 60 Q 100 50 95 40 Q 90 30 85 25 L 80 20 Q 75 15 70 12 Q 60 8 50 10 Q 40 12 40 20 Z" />
+  
+  <!-- Play button triangle in palm -->
+  <path class="hand-path" d="M 55 65 L 55 50 L 75 57.5 Z" />
+</svg>
+

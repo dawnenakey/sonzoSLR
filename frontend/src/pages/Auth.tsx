@@ -11,9 +11,12 @@ export default function Auth() {
       <div className="w-full max-w-md">
         {/* Logo/Brand */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            SPOKHAND SIGNCUT
-          </h1>
+          <div className="flex justify-center items-center gap-3 mb-4">
+            <img src="/spokhand-logo.svg" alt="SpokHand Logo" className="h-16 w-16" />
+            <h1 className="text-3xl font-bold text-gray-900">
+              SPOKHAND SIGNCUT
+            </h1>
+          </div>
           <p className="text-gray-600">
             Sign Language Dataset Creation Platform
           </p>
