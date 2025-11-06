@@ -1,7 +1,8 @@
-import { annotationAPI, Annotation as AnnotationInterface } from './awsClient';
+import { base44 } from './base44Client';
 
-// Export the Annotation interface for type checking
-export { AnnotationInterface as Annotation };
+export const Annotation = base44.entities.Annotation;
 
-// Export the annotation API as AnnotationEntity for backward compatibility
-export const AnnotationEntity = annotationAPI;
+export const Video = base44.entities.Video;
+
+// auth sdk:
+export const User = base44.auth;

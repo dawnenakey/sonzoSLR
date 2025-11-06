@@ -10,15 +10,6 @@ import Lexicon from "./Lexicon";
 
 import Segments from "./Segments";
 
-import CameraSettings from "./CameraSettings";
-import CameraTest from "./CameraTest";
-import Analysis from "./Analysis";
-import Troubleshoot from "./Troubleshoot";
-
-import ASLLex from "./ASLLex";
-import AnalyticsDashboard from "./AnalyticsDashboard";
-import InvestorPresentation from "./InvestorPresentation";
-
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -32,18 +23,6 @@ const PAGES = {
     Lexicon: Lexicon,
     
     Segments: Segments,
-    
-    CameraSettings: CameraSettings,
-    
-    CameraTest: CameraTest,
-    
-    Analysis: Analysis,
-    
-    Troubleshoot: Troubleshoot,
-    
-    ASLLex: ASLLex,
-    AnalyticsDashboard: AnalyticsDashboard,
-    InvestorPresentation: InvestorPresentation,
     
 }
 
@@ -81,20 +60,6 @@ function PagesContent() {
                 <Route path="/Lexicon" element={<Lexicon />} />
                 
                 <Route path="/Segments" element={<Segments />} />
-                
-                <Route path="/CameraSettings" element={<CameraSettings />} />
-                
-                <Route path="/CameraTest" element={<CameraTest />} />
-                
-                <Route path="/Analysis" element={<Analysis />} />
-                
-                <Route path="/Troubleshoot" element={<Troubleshoot />} />
-                
-                <Route path="/ASLLex" element={<ASLLex />} />
-                
-                <Route path="/AnalyticsDashboard" element={<AnalyticsDashboard />} />
-                
-                <Route path="/InvestorPresentation" element={<InvestorPresentation />} />
                 
             </Routes>
         </Layout>

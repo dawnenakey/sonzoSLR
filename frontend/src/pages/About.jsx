@@ -1,9 +1,9 @@
 import React from 'react';
-import { ArrowRight, Video, Clock, FileJson, Users, Monitor, Keyboard, Brain, Search, Zap, CheckCircle } from 'lucide-react';
+import { Video, Clock, FileJson, Keyboard } from 'lucide-react';
 
 export default function About() {
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto p-4 sm:p-6">
       <h1 className="text-3xl font-bold text-gray-900 mb-6">About the Sign Language Annotation Tool</h1>
       
       <section className="mb-10">
@@ -23,7 +23,7 @@ export default function About() {
             <div>
               <h3 className="font-semibold text-gray-900 mb-1">Video Segmentation</h3>
               <p className="text-gray-600 text-sm">
-                Precisely mark segments in sign language videos with a simple interface
+                Precisely mark segments in sign language videos with a simple interface.
               </p>
             </div>
           </div>
@@ -35,7 +35,7 @@ export default function About() {
             <div>
               <h3 className="font-semibold text-gray-900 mb-1">Exact Timecodes</h3>
               <p className="text-gray-600 text-sm">
-                Automatically generate precise timestamps for each annotation
+                Automatically generate precise timestamps for each annotation.
               </p>
             </div>
           </div>
@@ -47,7 +47,7 @@ export default function About() {
             <div>
               <h3 className="font-semibold text-gray-900 mb-1">JSON Export</h3>
               <p className="text-gray-600 text-sm">
-                Export standardized JSON data for use in research and analysis
+                Export standardized JSON data for use in research and analysis.
               </p>
             </div>
           </div>
@@ -59,109 +59,27 @@ export default function About() {
             <div>
               <h3 className="font-semibold text-gray-900 mb-1">Efficient Controls</h3>
               <p className="text-gray-600 text-sm">
-                Use keyboard shortcuts for fast, efficient annotation workflows
+                Use keyboard shortcuts for fast, efficient annotation workflows.
               </p>
             </div>
           </div>
-        </div>
-      </section>
-
-      <section className="mb-10">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Advanced AI Features (Now Available)</h2>
-        
-        <div className="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-xl shadow-md mb-6">
-          <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <CheckCircle className="h-5 w-5 text-green-600" />
-            Sign Spotting & Disambiguation
-          </h3>
-          <p className="text-gray-600 mb-3">
-            Advanced AI-powered sign language recognition using Large Language Models (LLMs) for 
-            context-aware disambiguation. This system combines visual feature extraction with 
-            linguistic reasoning to provide highly accurate sign identification.
-          </p>
-          <ul className="list-disc list-inside text-gray-600 space-y-1">
-            <li>I3D spatiotemporal feature extraction</li>
-            <li>Hand shape analysis using ResNeXt-101</li>
-            <li>Dictionary-based matching with dynamic time warping</li>
-            <li>LLM-powered beam search for context disambiguation</li>
-          </ul>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="bg-white p-6 rounded-xl shadow-sm flex items-start gap-4">
-            <div className="bg-purple-100 p-3 rounded-lg">
-              <Search className="h-6 w-6 text-purple-600" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-1">Sign Spotting</h3>
-              <p className="text-gray-600 text-sm">
-                Automatically identify and localize individual signs within continuous signing
-              </p>
-            </div>
-          </div>
-          
-          <div className="bg-white p-6 rounded-xl shadow-sm flex items-start gap-4">
-            <div className="bg-blue-100 p-3 rounded-lg">
-              <Zap className="h-6 w-6 text-blue-600" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-1">Context Disambiguation</h3>
-              <p className="text-gray-600 text-sm">
-                Use LLM reasoning to resolve ambiguous signs through linguistic context
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-6 bg-white p-6 rounded-xl shadow-sm">
-          <h4 className="font-semibold text-gray-900 mb-3">AI Configuration Options</h4>
-          <div className="grid md:grid-cols-2 gap-4 text-sm text-gray-600">
-            <div>
-              <h5 className="font-medium text-gray-900 mb-1">Feature Fusion Strategies</h5>
-              <ul className="space-y-1">
-                <li>• Late Fusion (α = 0.9) - Best performance</li>
-                <li>• Intermediate Fusion - Combined features</li>
-                <li>• Full Ensemble - Maximum accuracy</li>
-              </ul>
-            </div>
-            <div>
-              <h5 className="font-medium text-gray-900 mb-1">Advanced Settings</h5>
-              <ul className="space-y-1">
-                <li>• Dictionary size: 1,000-4,373 signs</li>
-                <li>• Beam search width: 1-50</li>
-                <li>• Fusion weight (α): 0.0-1.0</li>
-                <li>• Real-time processing</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-      
-      <section className="mb-10">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">AWS Video Database</h2>
-        
-        <div className="bg-white p-6 rounded-xl shadow-md mb-6">
-          <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <Video className="h-5 w-5 text-blue-600" />
-            Cloud Storage & Management
-          </h3>
-          <p className="text-gray-600 mb-3">
-            All videos are securely stored in AWS S3 with automatic backup and versioning. 
-            The database provides fast access, search capabilities, and seamless integration 
-            with the annotation workflow.
-          </p>
-          <ul className="list-disc list-inside text-gray-600 space-y-1">
-            <li>Secure AWS S3 storage with automatic backups</li>
-            <li>Real-time video streaming and processing</li>
-            <li>Advanced search and filtering capabilities</li>
-            <li>Metadata management and organization</li>
-            <li>Integration with annotation tools</li>
-          </ul>
         </div>
       </section>
       
       <section className="mb-10">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Use Cases</h2>
+        
+        <div className="bg-white p-6 rounded-xl shadow-md mb-6">
+          <h3 className="font-semibold text-gray-900 mb-3">Teaching sign language</h3>
+          <p className="text-gray-600 mb-3">
+            Teaching sign language requires clear segmentation of individual signs. This tool helps educators create precise learning materials and analyze student sign production.
+          </p>
+          <ul className="list-disc list-inside text-gray-600 space-y-1">
+            <li>Create sign language learning resources</li>
+            <li>Provide detailed feedback for learners</li>
+            <li>Document diverse signing styles for teaching</li>
+          </ul>
+        </div>
         
         <div className="bg-white p-6 rounded-xl shadow-md mb-6">
           <h3 className="font-semibold text-gray-900 mb-3">Research</h3>
@@ -174,20 +92,6 @@ export default function About() {
             <li>Document regional sign language variations</li>
             <li>Analyze prosodic features in signing</li>
             <li>Study transitional movements between signs</li>
-          </ul>
-        </div>
-        
-        <div className="bg-white p-6 rounded-xl shadow-md mb-6">
-          <h3 className="font-semibold text-gray-900 mb-3">Education</h3>
-          <p className="text-gray-600 mb-3">
-            Teaching sign language requires clear segmentation of individual signs. 
-            This tool helps educators create precise learning materials and analyze 
-            student sign production.
-          </p>
-          <ul className="list-disc list-inside text-gray-600 space-y-1">
-            <li>Create sign language learning resources</li>
-            <li>Provide detailed feedback for learners</li>
-            <li>Document diverse signing styles for teaching</li>
           </ul>
         </div>
         
