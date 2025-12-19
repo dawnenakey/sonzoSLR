@@ -1,6 +1,6 @@
 # SpokHand SLR - Sign Language Recognition System
 
-A comprehensive sign language recognition system with advanced AI features, AWS cloud integration, and data management capabilities for American Sign Language (ASL) research and development.
+A comprehensive sign language recognition system with advanced AI features, AWS cloud integration, and data management capabilities for American Sign Language (ASL) research and development. Patent Pending 63/918,518
 
 ## 🚀 New Features (Latest Update)
 
