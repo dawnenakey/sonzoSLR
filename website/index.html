@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SonZo.ai - Sign Language Recognition API</title>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root{--red:#EF3340;--yellow:#FFD700;--black:#0A0A0A;--white:#FFFFFF;--gray-600:#666}
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'DM Sans',sans-serif;color:var(--black)}
+        .hero{min-height:100vh;background:var(--red);display:flex;align-items:center;justify-content:center;text-align:center;padding:40px}
+        .hero h1{font-family:'Archivo Black',sans-serif;font-size:4rem;color:var(--white);margin-bottom:20px}
+        .hero h1 span{color:var(--yellow)}
+        .hero p{font-size:1.5rem;color:rgba(255,255,255,0.9);margin-bottom:40px;max-width:600px}
+        .btn{display:inline-block;padding:16px 32px;font-family:'Archivo Black',sans-serif;font-size:1rem;text-transform:uppercase;border:none;border-radius:4px;cursor:pointer;margin:10px;text-decoration:none}
+        .btn-yellow{background:var(--yellow);color:var(--black)}
+        .btn-black{background:var(--black);color:var(--white)}
+        .stats{background:var(--black);padding:60px 20px;display:flex;justify-content:center;gap:60px;flex-wrap:wrap}
+        .stat{text-align:center}
+        .stat-value{font-family:'Archivo Black',sans-serif;font-size:3rem;color:var(--yellow)}
+        .stat-label{color:var(--white);margin-top:8px}
+        .footer{background:#333;color:white;padding:40px;text-align:center}
+        .four-directions{display:flex;gap:8px;justify-content:center;margin-bottom:20px}
+        .four-directions span{width:20px;height:20px;border-radius:50%}
+        .d-red{background:var(--red)}.d-yellow{background:var(--yellow)}.d-white{background:var(--white)}.d-black{background:var(--black);border:1px solid #555}
+    </style>
+</head>
+<body>
+    <section class="hero">
+        <div>
+            <h1>SIGN LANGUAGE<br><span>RECOGNITION</span> API</h1>
+            <p>Convert ASL video to text in real-time. Full sentence recognition powered by patent-pending AI technology.</p>
+            <a href="/dashboard.html" class="btn btn-yellow">Get API Key</a>
+            <a href="/api/slr/health" class="btn btn-black">View API Status</a>
+        </div>
+    </section>
+    <section class="stats">
+        <div class="stat"><div class="stat-value">4,373</div><div class="stat-label">Signs Supported</div></div>
+        <div class="stat"><div class="stat-value">94%</div><div class="stat-label">Accuracy</div></div>
+        <div class="stat"><div class="stat-value">&lt;200ms</div><div class="stat-label">Latency</div></div>
+        <div class="stat"><div class="stat-value">$250</div><div class="stat-label">Basic Plan/mo</div></div>
+    </section>
+    <footer class="footer">
+        <div class="four-directions"><span class="d-red"></span><span class="d-yellow"></span><span class="d-white"></span><span class="d-black"></span></div>
+        <p>Four Directions • Indigenous-owned technology</p>
+        <p style="margin-top:10px">Powered by SonZo AI • Patent Pending 63/918,518</p>
+        <p style="margin-top:10px">&copy; 2025 SonZo AI</p>
+    </footer>
+</body>
+</html>
