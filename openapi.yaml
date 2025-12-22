@@ -1,0 +1,429 @@
+openapi: 3.0.3
+info:
+  title: SonZo.ai SLR API
+  description: |
+    ## Sign Language Recognition API
+    
+    SonZo.ai provides real-time American Sign Language (ASL) recognition 
+    using patent-pending 3D CNN and LSTM neural network technology.
+    
+    ### Key Features
+    - **Real-time Recognition**: Convert webcam ASL video to text instantly
+    - **Batch Processing**: Process pre-recorded videos asynchronously
+    - **High Accuracy**: 4,373 sign vocabulary with context disambiguation
+    - **Enterprise Ready**: HIPAA-compliant, SOC 2 certified infrastructure
+    
+    ### Use Cases
+    - Telemedicine accessibility
+    - Educational platforms
+    - Customer service accessibility
+    - Live event captioning
+    
+    ### Authentication
+    All API requests require an API key passed in the `X-API-Key` header.
+    
+    ### About SonZo.ai
+    Indigenous-owned technology company. Patent Pending 63/918,518
+    
+  version: 1.0.0
+  contact:
+    name: SonZo API Support
+    email: api@sonzo.ai
+    url: https://sonzo.ai/support
+  license:
+    name: Commercial License
+    url: https://sonzo.ai/license
+  x-logo:
+    url: https://sonzo.ai/logo.png
+
+servers:
+  - url: https://api.sonzo.ai/v1
+    description: Production server
+  - url: https://sandbox.api.sonzo.ai/v1
+    description: Sandbox server for testing
+
+security:
+  - ApiKeyAuth: []
+
+tags:
+  - name: Recognition
+    description: Sign language recognition endpoints
+  - name: Jobs
+    description: Async job management
+  - name: Usage
+    description: Usage and billing information
+  - name: Health
+    description: System health and status
+
+paths:
+  /recognize:
+    post:
+      tags:
+        - Recognition
+      summary: Recognize signs from video
+      description: |
+        Process a video file or video URL and return recognized ASL signs as text.
+        
+        **Supported formats**: MP4, WebM, MOV  
+        **Max file size**: 100MB  
+        **Max duration**: 5 minutes (sync), unlimited (async)
+        
+        For videos longer than 30 seconds, use `async: true` to process in background.
+      operationId: recognizeSigns
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                video:
+                  type: string
+                  format: binary
+                  description: Video file to process
+                video_url:
+                  type: string
+                  format: uri
+                  description: URL of video to process (alternative to file upload)
+                async:
+                  type: boolean
+                  default: false
+                  description: Process asynchronously for long videos
+                return_alternatives:
+                  type: boolean
+                  default: false
+                  description: Return alternative sign interpretations
+                confidence_threshold:
+                  type: number
+                  format: float
+                  default: 0.5
+                  minimum: 0
+                  maximum: 1
+                  description: Minimum confidence score for results
+          application/json:
+            schema:
+              type: object
+              properties:
+                frames:
+                  type: array
+                  items:
+                    type: string
+                  description: Base64-encoded video frames
+                return_alternatives:
+                  type: boolean
+                  default: false
+                confidence_threshold:
+                  type: number
+                  format: float
+                  default: 0.5
+      responses:
+        '200':
+          description: Recognition successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecognitionResult'
+        '202':
+          description: Async job created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /recognize/stream:
+    post:
+      tags:
+        - Recognition
+      summary: Real-time streaming recognition
+      description: |
+        WebSocket endpoint for real-time sign language recognition.
+        
+        **Connection**: `wss://api.sonzo.ai/v1/recognize/stream`
+        
+        Send video frames as binary WebSocket messages.
+        Receive recognition results as JSON messages.
+      operationId: streamRecognition
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                session_config:
+                  type: object
+                  properties:
+                    language:
+                      type: string
+                      default: "ASL"
+                      enum: ["ASL", "BSL", "LSF"]
+                    output_format:
+                      type: string
+                      default: "text"
+                      enum: ["text", "gloss", "both"]
+      responses:
+        '101':
+          description: WebSocket connection established
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /jobs/{job_id}:
+    get:
+      tags:
+        - Jobs
+      summary: Get job status
+      description: Check the status of an async recognition job
+      operationId: getJobStatus
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Job status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatus'
+        '404':
+          description: Job not found
+
+  /usage:
+    get:
+      tags:
+        - Usage
+      summary: Get usage statistics
+      description: Retrieve current billing period usage and limits
+      operationId: getUsage
+      responses:
+        '200':
+          description: Usage data retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageData'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /signs:
+    get:
+      tags:
+        - Recognition
+      summary: List supported signs
+      description: Get list of all signs the API can recognize
+      operationId: listSigns
+      responses:
+        '200':
+          description: Signs list retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  signs:
+                    type: array
+                    items:
+                      type: string
+                  count:
+                    type: integer
+
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Check API health status
+      operationId: healthCheck
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  service:
+                    type: string
+                    example: "SonZo.ai SLR API"
+                  version:
+                    type: string
+                    example: "1.0.0"
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication
+
+  schemas:
+    RecognitionResult:
+      type: object
+      properties:
+        sign:
+          type: string
+          description: Recognized sign
+          example: "HELLO"
+        confidence:
+          type: number
+          format: float
+          description: Confidence score (0-1)
+          example: 0.94
+        alternatives:
+          type: array
+          items:
+            type: object
+            properties:
+              sign:
+                type: string
+              confidence:
+                type: number
+          description: Alternative interpretations
+        processing_time_ms:
+          type: number
+          description: Processing time in milliseconds
+          example: 145.3
+        request_id:
+          type: string
+          format: uuid
+          description: Unique request identifier
+
+    JobCreated:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: ["queued", "processing", "completed", "failed"]
+        estimated_completion:
+          type: string
+          format: date-time
+        poll_url:
+          type: string
+          format: uri
+
+    JobStatus:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: ["queued", "processing", "completed", "failed"]
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        result:
+          $ref: '#/components/schemas/RecognitionResult'
+        error:
+          type: string
+
+    UsageData:
+      type: object
+      properties:
+        client_id:
+          type: string
+        client_name:
+          type: string
+        tier:
+          type: string
+          enum: ["basic", "pro", "enterprise"]
+        calls_this_month:
+          type: integer
+        calls_limit:
+          type: integer
+        video_minutes_used:
+          type: integer
+        video_minutes_limit:
+          type: integer
+        streaming_minutes_used:
+          type: integer
+        streaming_minutes_limit:
+          type: integer
+        cost_this_month:
+          type: number
+          format: float
+        billing_period_start:
+          type: string
+          format: date
+        billing_period_end:
+          type: string
+          format: date
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "BAD_REQUEST"
+              message: "Invalid video format. Supported: MP4, WebM, MOV"
+
+    Unauthorized:
+      description: Missing or invalid API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "UNAUTHORIZED"
+              message: "Invalid API key"
+
+    RateLimited:
+      description: Rate limit exceeded
+      headers:
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "RATE_LIMITED"
+              message: "Rate limit exceeded. Upgrade your plan for higher limits."
