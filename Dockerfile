@@ -1,30 +1,14 @@
-# Use Python 3.10 as base image
 FROM python:3.10-slim
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    libgl1-mesa-glx \
-    libglib2.0-0 \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-# Set working directory
 WORKDIR /app
 
-# Copy requirements first to leverage Docker cache
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install PyTorch CPU (smaller) and dependencies
+RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+RUN pip install fastapi uvicorn boto3 pydantic opencv-python-headless numpy
 
-# Copy application code
-COPY . .
+COPY main.py .
+COPY models/ ./models/
 
-# Expose port
-EXPOSE 5000
+EXPOSE 8000
 
-# Set environment variables
-ENV PYTHONPATH=/app
-ENV FLASK_APP=application.py
-ENV FLASK_ENV=production
-
-# Run the Flask application
-CMD ["python", "application.py"] 
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
